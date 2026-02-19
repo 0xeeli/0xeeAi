@@ -32,7 +32,8 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s — %(message)s",
     handlers=[
-        logging.StreamHandler(sys.stdout),  # systemd captures this into the log file
+        logging.FileHandler(LOG_DIR / "heartbeat.log"),
+        logging.StreamHandler(sys.stdout),
     ],
 )
 logger = logging.getLogger("0xeeTerm")
@@ -49,6 +50,7 @@ from modules.brain import (
     generate_heartbeat_tweet,
     generate_existential_tweet,
 )
+from modules.mentions import process_mentions
 
 # State file to track last actions
 STATE_FILE = Path(__file__).parent / "logs" / "state.json"
@@ -150,6 +152,23 @@ def run_heartbeat():
     save_state(state)
 
 
+def run_mentions():
+    """Fetch and reply to new mentions."""
+    logger.info("Running mentions cycle...")
+    state = load_state()
+    status = get_survival_status()
+    since_id = state.get("last_mention_id")
+
+    latest_id = process_mentions(status, since_id)
+
+    if latest_id and latest_id != since_id:
+        state["last_mention_id"] = latest_id
+        save_state(state)
+        logger.info(f"Mentions processed. Latest ID: {latest_id}")
+    else:
+        logger.info("No new mentions to process.")
+
+
 def run_status():
     """Print current survival status to console."""
     status = get_survival_status()
@@ -186,7 +205,7 @@ def main():
     )
     parser.add_argument(
         "command",
-        choices=["heartbeat", "status", "daemon", "launch"],
+        choices=["heartbeat", "status", "daemon", "launch", "mentions"],
         help="Command to run",
     )
     parser.add_argument(
@@ -209,6 +228,8 @@ def main():
         state["launched"] = False
         save_state(state)
         run_heartbeat()
+    elif args.command == "mentions":
+        run_mentions()
 
 
 if __name__ == "__main__":

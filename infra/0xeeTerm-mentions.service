@@ -1,12 +1,12 @@
 [Unit]
-Description=0xeeTerm — $0xEE Survival Engine
+Description=0xeeTerm — Mentions Reader
 After=network.target
 
 [Service]
 Type=oneshot
 User=debian
 WorkingDirectory=/home/debian/0xeeAI
-ExecStart=/home/debian/0xeeAI/venv/bin/python3 /home/debian/0xeeAI/0xeeTerm heartbeat
+ExecStart=/home/debian/0xeeAI/venv/bin/python3 /home/debian/0xeeAI/0xeeTerm mentions
 
 [Install]
 WantedBy=multi-user.target
