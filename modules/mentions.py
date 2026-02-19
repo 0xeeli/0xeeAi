@@ -83,8 +83,8 @@ Write a reply or return SKIP."""
 #  FETCH & REPLY
 # ─────────────────────────────────────────────
 
-def get_client() -> tweepy.Client:
-    """Initialise le client Tweepy strictement en mode User Context (OAuth 1.0a)"""
+def get_client_user_context() -> tweepy.Client:
+    """OAuth 1.0a only — no bearer_token to avoid tweepy prioritizing app context."""
     return tweepy.Client(
         consumer_key=os.getenv("X_API_KEY"),
         consumer_secret=os.getenv("X_API_SECRET"),
@@ -100,13 +100,14 @@ def process_mentions(status: dict, since_id: str = None) -> str | None:
     Returns the latest mention ID processed (for state tracking).
     """
     try:
-        client = get_client()
-        me = client.get_me()
+        client = get_client_user_context()
+        me = client.get_me(user_auth=True)
         user_id = me.data.id
 
         params = {
             "max_results": 10,
             "tweet_fields": ["author_id", "text", "conversation_id"],
+            "user_auth": True,
         }
         if since_id:
             params["since_id"] = since_id
