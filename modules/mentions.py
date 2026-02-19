@@ -136,6 +136,12 @@ def process_mentions(status: dict, since_id: str = None) -> str | None:
 
             if reply_text:
                 try:
+                    client.like(mention_id, user_auth=True)
+                    logger.info(f"Liked mention {mention_id}")
+                except tweepy.TweepyException as e:
+                    logger.warning(f"Could not like mention {mention_id}: {e}")
+
+                try:
                     client.create_tweet(
                         text=reply_text,
                         in_reply_to_tweet_id=mention_id,
