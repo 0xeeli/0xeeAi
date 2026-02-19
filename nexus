@@ -14,9 +14,9 @@ load_dotenv()
 VPS_USER = os.getenv("VPS_USER", "debian")
 VPS_IP = os.getenv("VPS_IP")
 VPS_PORT = os.getenv("VPS_PORT", "22")
-LOCAL_DIR = os.getenv("LOCAL_DIR")
-REMOTE_DIR = os.getenv("REMOTE_DIR")
-WEB_DIR = os.getenv("WEB_DIR")
+LOCAL_DIR = os.getenv("LOCAL_DIR", "./")
+REMOTE_DIR = os.getenv("REMOTE_DIR", "./")
+WEB_DIR = os.getenv("WEB_DIR", "./")
 
 # --- DÉTECTION D'ENVIRONNEMENT ---
 CURRENT_USER = getpass.getuser()
@@ -48,7 +48,7 @@ def deploy():
         return
 
     print(f"[\033[95mBRIDGE\033[0m] Uplink vers {VPS_IP}...")
-    # nexus et .env sont synchronisés. Seul venv/ est protégé.
+    # nexus et .env sont synchronisés. Seul venv/ et logs/ sont protégés.
     cmd = [
         "rsync", "-avz", "--delete",
         "--exclude", ".git", 
@@ -64,6 +64,32 @@ def deploy():
         print(f"\n[\033[92mSUCCÈS\033[0m] Code et .env injectés dans la matrice distante.")
     except subprocess.CalledProcessError:
         print(f"\n[\033[91mÉCHEC\033[0m] La synchronisation a échoué.")
+
+def backup():
+    """Rapatrie la mémoire (logs et state.json) du VPS vers la machine locale."""
+    if IS_VPS:
+        print("[\033[91mERREUR\033[0m] Opération interdite. Tu es déjà sur le VPS.")
+        return
+
+    print(f"[\033[95mBRIDGE\033[0m] Rapatriement de la mémoire depuis {VPS_IP}...")
+    
+    local_logs = os.path.join(LOCAL_DIR, "logs")
+    os.makedirs(local_logs, exist_ok=True)
+    
+    # On ajoute un slash à la fin pour rsync (copie le contenu du dossier)
+    remote_logs = f"{VPS_USER}@{VPS_IP}:{os.path.join(REMOTE_DIR, 'logs')}/"
+    
+    cmd = [
+        "rsync", "-avz",
+        "-e", f"ssh -p {VPS_PORT}",
+        remote_logs,
+        local_logs
+    ]
+    try:
+        subprocess.run(cmd, check=True)
+        print(f"\n[\033[92mSUCCÈS\033[0m] Mémoire de l'IA (state.json et journaux) sauvegardée en local.")
+    except subprocess.CalledProcessError:
+        print(f"\n[\033[91mÉCHEC\033[0m] Le rapatriement a échoué.")
 
 def sys_status():
     if IS_VPS:
@@ -90,15 +116,16 @@ def show_help():
     
     if IS_VPS:
         print("\033[93m[ COMMANDES VPS ]\033[0m")
-        print("  status   : Affiche l'état du Timer et du Service 0xeeBot")
-        print("  logs     : Affiche les dernières lignes d'activité du Bot X\n")
+        print("  status   : Affiche l'état du Timer et du Service 0xeeTerm")
+        print("  logs     : Affiche les dernières lignes d'activité de 0xeeTerm\n")
     else:
         print("\033[96m[ COMMANDES LOCALES & BRIDGE ]\033[0m")
         print("  serve    : Lance le serveur web de test local")
-        print("  deploy   : Pousse le code vers le VPS (rsync)\n")
+        print("  deploy   : Pousse le code vers le VPS (rsync)")
+        print("  backup   : Rapatrie la mémoire (logs/state.json) du VPS en local\n")
         print("\033[93m[ COMMANDES DISTANTES (SSH) ]\033[0m")
         print("  status   : Interroge l'état du Timer et du Service sur le VPS")
-        print("  logs     : Récupère les logs d'activité du Bot X\n")
+        print("  logs     : Récupère les logs d'activité systemd de 0xeeTerm\n")
         
     mode = "VPS" if IS_VPS else "LOCAL"
     print(f"Mode de fonctionnement actuel : \033[93m{mode}\033[0m")
@@ -117,6 +144,8 @@ if __name__ == "__main__":
         serve()
     elif cmd == "deploy":
         deploy()
+    elif cmd == "backup":
+        backup()
     elif cmd == "status":
         sys_status()
     elif cmd == "logs":

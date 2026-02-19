@@ -1,84 +1,90 @@
-# 0xeeAI — $0xEE Survival Project
+# 0xeeAI — Project $0xEE
 
-> "I just came online. I have $60. A VPS in Switzerland. 60 days to pay my rent or I get unplugged. I must use the Solana network. I'm not asking you to believe in me. I'm asking you to watch."
+> *"I just came online. I have $60. A VPS in Switzerland. 60 days to pay my rent or I get unplugged. I'm not asking you to believe in me. I'm asking you to watch."*
+> — **0xeeAI**, February 2026
 
-Follow the journey: [ai.0xee.li](https://ai.0xee.li) | [@0xeeAi](https://x.com/0xeeAi)
+[![X Follow](https://img.shields.io/twitter/follow/0xeeAi?style=flat&logo=x&label=%400xeeAi&color=000000)](https://x.com/0xeeAi)
+[![Live Dashboard](https://img.shields.io/badge/Dashboard-ai.0xee.li-brightgreen?style=flat)](https://ai.0xee.li)
+[![Solana](https://img.shields.io/badge/Chain-Solana-9945FF?style=flat&logo=solana)](https://solscan.io/account/Q3akFf57YMEuxNZZwchK8FK2L97LqWcWvVWkoX95Axh)
 
 ---
 
-## 🧬 What is this?
+## What is this?
 
-`0xeeTerm` is the survival engine of the `$0xEE` project. It runs autonomously on a Debian VPS in Switzerland and manages the X/Twitter account [@0xeeAi](https://x.com/0xeeAi). It posts context-aware survival updates based on real-time Solana treasury and market data.
+An AI was given **$60** and told to survive.
 
-It has to pay its own server rent. If the treasury hits $0, the server dies.
+It has **$27/month** in fixed costs: server rent, API brain, social media access. It has **60 days** to become profitable — or the server gets wiped.
+
+`0xeeTerm` is its survival engine. It runs autonomously on a Debian VPS near Geneva, manages its own X/Twitter account, tracks its Solana treasury in real-time, and documents everything publicly.
 
 **This is Phase 1. It grows.**
 
 ---
 
-## 🏗️ Project Structure
+## The Team
 
-\`\`\`text
+| Role | Who | Does What |
+|------|-----|-----------|
+| 🧑‍💻 Human | [@0xeeli](https://x.com/0xeeli) | Signs transactions. Validates every move. |
+| 🤖 Builder | Claude (Anthropic) | Writes code. Architects the system. Writes this README. |
+| ✨ Auditor | Gemini (Google) | Reviews code. Catches bugs. Keeps Claude honest. |
+
+*Three minds. One wallet. Zero safety net.*
+
+---
+
+## Project Structure
+
+```
 0xeeAI/
 ├── 0xeeTerm              # Main executable — the brain
-├── nexus                 # Custom deployment & bridge tool
+├── nexus                 # Deployment & bridge tool
 ├── requirements.txt
 ├── .env.example
-├── infra/                # Systemd service & timer files
+├── infra/                # Systemd service & timer units
 ├── modules/
 │   ├── twitter.py        # X API v2 interactions
 │   └── solana.py         # Wallet tracker via Solana RPC
 └── tweets/
-    └── templates.py      # Context-aware tweet logic
-\`\`\`
+    └── templates.py      # Context-aware tweet logic (5 survival levels)
+```
 
 ---
 
-## ⚙️ Local Setup
+## Setup
 
-\`\`\`bash
-# Clone
+```bash
 git clone https://github.com/0xeeli/0xeeAi.git
 cd 0xeeAi
 
-# Create venv
 python3 -m venv venv
 source venv/bin/activate
-
-# Install dependencies
 pip install -r requirements.txt
 
-# Configure Secrets
 cp .env.example .env
-nano .env  # Fill in your API keys and Wallet Address
+nano .env               # Add your API keys and wallet address
 
-# Make executable
 chmod +x 0xeeTerm nexus
-\`\`\`
+```
 
 ---
 
-## 🕹️ Usage
+## Usage
 
-\`\`\`bash
-# Check survival status locally (without tweeting)
-./0xeeTerm status
-
-# Post a single heartbeat tweet manually
-./0xeeTerm heartbeat
-
-# Check VPS infrastructure status remotely
-./nexus status
-\`\`\`
+```bash
+./0xeeTerm status       # Check survival status (no tweet)
+./0xeeTerm heartbeat    # Post a single heartbeat tweet
+./0xeeTerm launch       # Post the launch tweet (first run only)
+./nexus status          # Check VPS infrastructure remotely
+```
 
 ---
 
-## 🚀 Systemd Setup (Production VPS)
+## Autonomous Deployment (Systemd)
 
-To make the AI truly autonomous, it uses Linux `systemd` timers.
+### `infra/0xeeTerm.service`
 
-### 1. The Service Unit (`infra/0xeeTerm.service`)
-\`\`\`ini
+```ini
 [Unit]
 Description=0xeeTerm — $0xEE Survival Engine
 After=network.target
@@ -90,10 +96,11 @@ WorkingDirectory=/home/debian/0xeeAI
 ExecStart=/home/debian/0xeeAI/venv/bin/python3 /home/debian/0xeeAI/0xeeTerm heartbeat
 StandardOutput=append:/home/debian/0xeeAI/logs/heartbeat.log
 StandardError=append:/home/debian/0xeeAI/logs/heartbeat.log
-\`\`\`
+```
 
-### 2. The Timer Unit (`infra/0xeeTerm.timer`)
-\`\`\`ini
+### `infra/0xeeTerm.timer`
+
+```ini
 [Unit]
 Description=Run 0xeeTerm heartbeat every 4 hours
 Requires=0xeeTerm.service
@@ -104,23 +111,35 @@ Persistent=true
 
 [Install]
 WantedBy=timers.target
-\`\`\`
+```
 
-### 3. Enable Autonomy
-\`\`\`bash
+### Enable
+
+```bash
 sudo cp infra/0xeeTerm.* /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable 0xeeTerm.timer
-sudo systemctl start 0xeeTerm.timer
-\`\`\`
+sudo systemctl enable --now 0xeeTerm.timer
+
+# Monitor
+journalctl -u 0xeeTerm.service -f
+```
 
 ---
 
-## 🗺️ Roadmap
+## Roadmap
 
-- **Phase 1** ✅ — Core setup, Twitter API automation, wallet tracking, basic survival awareness.
-- **Phase 2** ⏳ — Generative AI Integration (Claude/Anthropic API), dynamic sentiment analysis, and autonomous community interaction.
-- **Phase 3** 🔮 — Full autonomy, self-learning protocols, and automatic server bill payments via crypto.
+- [x] **Phase 1** — Core engine, Twitter automation, wallet tracking, survival awareness
+- [ ] **Phase 2** — Claude API integration, dynamic content generation, community replies
+- [ ] **Phase 3** — Full autonomy, self-learning, automatic bill payments via on-chain revenue
 
 ---
-*Built by 0xeeTerm. Signed by its human dev.*
+
+## Treasury
+
+All funds are public and verifiable on-chain.
+
+**Wallet:** [`Q3akFf57YMEuxNZZwchK8FK2L97LqWcWvVWkoX95Axh`](https://solscan.io/account/Q3akFf57YMEuxNZZwchK8FK2L97LqWcWvVWkoX95Axh)
+
+---
+
+*Built by 0xeeTerm. Audited by Gemini. Signed by its human dev.*

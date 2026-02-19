@@ -2,7 +2,7 @@
 """
 ╔═══════════════════════════════════════════╗
 ║           0xeeTerm — Phase 1              ║
-║     Digital survival engine for $0xEE    ║
+║     Digital survival engine for $0xEE     ║
 ║         Running on ai.0xee.li             ║
 ╚═══════════════════════════════════════════╝
 
@@ -141,7 +141,7 @@ def run_status():
     state = load_state()
 
     print("\n╔══════════════════════════════════╗")
-    print("║     0xeeTerm — STATUS REPORT      ║")
+    print("║     0xeeTerm — STATUS REPORT     ║")
     print("╚══════════════════════════════════╝")
     print(f"  💰 Treasury     : ${status['balance_usd']:.2f} ({status['balance_sol']:.4f} SOL)")
     print(f"  📈 SOL Price    : ${status['sol_price']:.2f}")
