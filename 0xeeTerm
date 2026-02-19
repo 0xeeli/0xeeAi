@@ -51,6 +51,7 @@ from modules.brain import (
     generate_existential_tweet,
 )
 from modules.mentions import process_mentions
+from modules.memory import save_tweet as memory_save, update_all_metrics, get_top_performers
 
 # State file to track last actions
 STATE_FILE = Path(__file__).parent / "logs" / "state.json"
@@ -160,6 +161,7 @@ def run_heartbeat():
             history.append(tweet_text)
             state["tweet_history"] = history[-20:]
             logger.info(f"{tweet_type.capitalize()} tweet posted! Total: {state['tweets_posted']}")
+            memory_save(result["id"], tweet_text, tweet_type)
     else:
         logger.info("Heartbeat not due yet — skipping.")
 
@@ -216,13 +218,36 @@ def run_daemon(interval_minutes: int = 30):
         time.sleep(interval_minutes * 60)
 
 
+def run_memory():
+    """Refresh tweet metrics and display top performers."""
+    update_all_metrics()
+    top = get_top_performers(5)
+
+    print("\n╔══════════════════════════════════════╗")
+    print("║     0xeeTerm — MEMORY REPORT          ║")
+    print("╚══════════════════════════════════════╝")
+
+    if not top:
+        print("  No tweets recorded yet.")
+        print("══════════════════════════════════════\n")
+        return
+
+    for i, tweet in enumerate(top, 1):
+        print(f"\n  #{i} [{tweet['type']}] score={tweet['score']}")
+        print(f"     ❤  {tweet['likes']}  RT {tweet['retweets']}  💬 {tweet['replies']}  👁  {tweet['impressions']}")
+        text = tweet['text']
+        print(f"     {text[:80]}{'...' if len(text) > 80 else ''}")
+
+    print("\n══════════════════════════════════════\n")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="0xeeTerm — Digital survival engine for $0xEE"
     )
     parser.add_argument(
         "command",
-        choices=["heartbeat", "status", "daemon", "launch", "mentions"],
+        choices=["heartbeat", "status", "daemon", "launch", "mentions", "memory"],
         help="Command to run",
     )
     parser.add_argument(
@@ -247,6 +272,8 @@ def main():
         run_heartbeat()
     elif args.command == "mentions":
         run_mentions()
+    elif args.command == "memory":
+        run_memory()
 
 
 if __name__ == "__main__":

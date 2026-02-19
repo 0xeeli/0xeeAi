@@ -7,6 +7,7 @@ import os
 import logging
 import anthropic
 import tweepy
+from modules.memory import save_tweet as memory_save
 
 logger = logging.getLogger("0xeeTerm.mentions")
 
@@ -142,11 +143,12 @@ def process_mentions(status: dict, since_id: str = None) -> str | None:
                     logger.warning(f"Could not like mention {mention_id}: {e}")
 
                 try:
-                    client.create_tweet(
+                    result = client.create_tweet(
                         text=reply_text,
                         in_reply_to_tweet_id=mention_id,
                     )
                     logger.info(f"Replied to mention {mention_id}")
+                    memory_save(result.data["id"], reply_text, "reply")
                 except tweepy.TweepyException as e:
                     logger.error(f"Failed to reply to {mention_id}: {e}")
 
