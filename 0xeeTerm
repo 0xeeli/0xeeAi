@@ -75,6 +75,20 @@ def save_state(state: dict):
         json.dump(state, f, indent=2)
 
 
+def save_public_data(state: dict, status: dict):
+    """Export live data for ai.0xee.li frontend."""
+    public_file = Path(__file__).parent / "logs" / "public.json"
+    public_data = {
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "finance": status,
+        "history": state.get("tweet_history", []),
+        "tweets_posted": state.get("tweets_posted", 0),
+    }
+    with open(public_file, "w") as f:
+        json.dump(public_data, f, indent=2)
+    logger.info("public.json updated.")
+
+
 def should_post_heartbeat(state: dict, interval_hours: int = 2) -> bool:
     if not state.get("last_heartbeat"):
         return True
@@ -150,6 +164,7 @@ def run_heartbeat():
         logger.info("Heartbeat not due yet — skipping.")
 
     save_state(state)
+    save_public_data(state, status)
 
 
 def run_mentions():
@@ -167,6 +182,8 @@ def run_mentions():
         logger.info(f"Mentions processed. Latest ID: {latest_id}")
     else:
         logger.info("No new mentions to process.")
+
+    save_public_data(state, status)
 
 
 def run_status():
