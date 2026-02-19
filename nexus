@@ -47,6 +47,11 @@ def deploy():
         print("[\033[91mERREUR\033[0m] Opération interdite. Tu es déjà sur le VPS. Le déploiement se fait depuis la machine locale.")
         return
 
+    confirm = input(f"[\033[93mATTENTION\033[0m] Déployer sur {VPS_IP} avec --delete ? (y/N) : ").strip().lower()
+    if confirm != "y":
+        print("[\033[96mANNULÉ\033[0m] Déploiement annulé.")
+        return
+
     print(f"[\033[95mBRIDGE\033[0m] Uplink vers {VPS_IP}...")
     # nexus et .env sont synchronisés. Seul venv/ et logs/ sont protégés.
     cmd = [
@@ -94,21 +99,32 @@ def backup():
 def sys_status():
     if IS_VPS:
         print("[\033[93mVPS\033[0m] Lecture directe des senseurs systemd...\n")
-        cmd = "echo '\033[96m[--- ÉTAT DU TIMER ---]\033[0m'; systemctl list-timers | grep 0xeeTerm || echo 'Aucun timer actif.'; echo ''; echo '\033[96m[--- ÉTAT DU SERVICE ---]\033[0m'; systemctl status 0xeeTerm.service --no-pager || true"
-        subprocess.run(cmd, shell=True)
+        print("\033[96m[--- ÉTAT DU TIMER ---]\033[0m")
+        result = subprocess.run(["systemctl", "list-timers"], capture_output=True, text=True)
+        lines = [l for l in result.stdout.splitlines() if "0xeeTerm" in l]
+        print("\n".join(lines) if lines else "Aucun timer actif.")
+        print()
+        print("\033[96m[--- ÉTAT DU SERVICE ---]\033[0m")
+        subprocess.run(["systemctl", "status", "0xeeTerm.service", "--no-pager"])
     else:
         print(f"[\033[95mBRIDGE\033[0m] Interrogation SSH sur {VPS_IP}...\n")
-        ssh_cmd = f"ssh -p {VPS_PORT} {VPS_USER}@{VPS_IP} \"echo '\033[96m[--- ÉTAT DU TIMER ---]\033[0m'; systemctl list-timers | grep 0xeeTerm || echo 'Aucun timer actif.'; echo ''; echo '\033[96m[--- ÉTAT DU SERVICE ---]\033[0m'; systemctl status 0xeeTerm.service --no-pager || true\""
-        subprocess.run(ssh_cmd, shell=True)
+        remote_cmd = (
+            "echo '[--- ÉTAT DU TIMER ---]';"
+            "systemctl list-timers | grep 0xeeTerm || echo 'Aucun timer actif.';"
+            "echo '';"
+            "echo '[--- ÉTAT DU SERVICE ---]';"
+            "systemctl status 0xeeTerm.service --no-pager || true"
+        )
+        subprocess.run(["ssh", "-p", VPS_PORT, f"{VPS_USER}@{VPS_IP}", remote_cmd])
 
 def sys_logs():
     if IS_VPS:
         print("[\033[93mVPS\033[0m] Extraction locale des journaux...\n")
-        subprocess.run("journalctl -u 0xeeTerm.service -n 15 --no-pager", shell=True)
+        subprocess.run(["journalctl", "-u", "0xeeTerm.service", "-n", "15", "--no-pager"])
     else:
         print(f"[\033[95mBRIDGE\033[0m] Extraction SSH des journaux depuis {VPS_IP}...\n")
-        ssh_cmd = f"ssh -p {VPS_PORT} {VPS_USER}@{VPS_IP} \"journalctl -u 0xeeTerm.service -n 15 --no-pager\""
-        subprocess.run(ssh_cmd, shell=True)
+        subprocess.run(["ssh", "-p", VPS_PORT, f"{VPS_USER}@{VPS_IP}",
+                        "journalctl -u 0xeeTerm.service -n 15 --no-pager"])
 
 def show_help():
     print_banner()
