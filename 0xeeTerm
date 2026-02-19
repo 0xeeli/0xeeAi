@@ -14,6 +14,7 @@ import os
 import sys
 import json
 import time
+import random
 import logging
 import argparse
 from datetime import datetime, timezone
@@ -45,6 +46,7 @@ from tweets.templates import (
     get_heartbeat_tweet,
     get_daily_report_tweet,
     get_launch_tweet,
+    get_existential_tweet,
 )
 
 # State file to track last actions
@@ -115,7 +117,13 @@ def run_heartbeat():
         return
 
     if should_post_heartbeat(state):
-        tweet_text = get_heartbeat_tweet(status)
+        # 20% chance of existential tweet instead of financial heartbeat
+        if random.random() < 0.20:
+            tweet_text = get_existential_tweet()
+            logger.info("Chose an existential tweet.")
+        else:
+            tweet_text = get_heartbeat_tweet(status)
+            logger.info("Chose a financial heartbeat tweet.")
         result = post_tweet(tweet_text)
         if result:
             state["last_heartbeat"] = datetime.now(timezone.utc).isoformat()

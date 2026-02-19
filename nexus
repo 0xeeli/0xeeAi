@@ -53,7 +53,8 @@ def deploy():
         "rsync", "-avz", "--delete",
         "--exclude", ".git", 
         "--exclude", "__pycache__", 
-        "--exclude", "venv/",  
+        "--exclude", "venv/",
+        "--exclude", "logs/",  
         "-e", f"ssh -p {VPS_PORT}",
         LOCAL_DIR,
         f"{VPS_USER}@{VPS_IP}:{REMOTE_DIR}"

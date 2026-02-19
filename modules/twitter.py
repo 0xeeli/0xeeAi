@@ -17,7 +17,7 @@ def get_client() -> tweepy.Client:
         consumer_key=os.getenv("X_API_KEY"),
         consumer_secret=os.getenv("X_API_SECRET"),
         access_token=os.getenv("X_ACCESS_TOKEN"),
-        access_token_secret=os.getenv("X_ACCESS_TOKEN_SECRET"),
+        access_token_secret=os.getenv("X_ACCESS_SECRET"),
         wait_on_rate_limit=True,
     )
     return client
