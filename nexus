@@ -96,6 +96,68 @@ def backup():
     except subprocess.CalledProcessError:
         print(f"\n[\033[91mÉCHEC\033[0m] Le rapatriement a échoué.")
 
+def check():
+    """Validate all required .env variables. Fail fast with clear output."""
+    required = {
+        "VPS_IP":              VPS_IP,
+        "VPS_USER":            VPS_USER,
+        "ANTHROPIC_API_KEY":   os.getenv("ANTHROPIC_API_KEY"),
+        "X_API_KEY":           os.getenv("X_API_KEY"),
+        "X_API_SECRET":        os.getenv("X_API_SECRET"),
+        "X_ACCESS_TOKEN":      os.getenv("X_ACCESS_TOKEN"),
+        "X_ACCESS_SECRET":     os.getenv("X_ACCESS_SECRET"),
+        "X_BEARER_TOKEN":      os.getenv("X_BEARER_TOKEN"),
+        "SOLANA_WALLET":       os.getenv("SOLANA_WALLET"),
+    }
+    print_banner()
+    print("[\033[96mCHECK\033[0m] Validating environment variables...\n")
+    all_ok = True
+    for key, value in required.items():
+        if not value:
+            print(f"  [\033[91mMISSING\033[0m] {key}")
+            all_ok = False
+        else:
+            masked = "*" * 8 + value[-4:]
+            print(f"  [\033[92mOK\033[0m]      {key} = {masked}")
+    print()
+    if all_ok:
+        print("[\033[92mSUCCESS\033[0m] All variables are set. Ready to operate.")
+    else:
+        print("[\033[91mFAIL\033[0m] Missing variables. Check your .env file.")
+        sys.exit(1)
+
+
+def restart():
+    """Restart the 0xeeTerm systemd timer (local on VPS, or via SSH from local)."""
+    if IS_VPS:
+        print("[\033[93mVPS\033[0m] Restarting 0xeeTerm.timer locally...\n")
+        subprocess.run(["systemctl", "restart", "0xeeTerm.timer"])
+        subprocess.run(["systemctl", "status", "0xeeTerm.timer", "--no-pager"])
+    else:
+        print(f"[\033[95mBRIDGE\033[0m] Restarting 0xeeTerm.timer on {VPS_IP}...\n")
+        subprocess.run([
+            "ssh", "-p", VPS_PORT, f"{VPS_USER}@{VPS_IP}",
+            "systemctl restart 0xeeTerm.timer && systemctl status 0xeeTerm.timer --no-pager"
+        ])
+
+
+def trigger(action: str):
+    """Run 0xeeTerm heartbeat or mentions directly on the VPS (skips the timer)."""
+    valid_actions = ["heartbeat", "mentions"]
+    if action not in valid_actions:
+        print(f"[\033[91mERROR\033[0m] Unknown action '{action}'. Choose: {', '.join(valid_actions)}")
+        sys.exit(1)
+
+    remote_cmd = f"cd {REMOTE_DIR.rstrip('/')} && venv/bin/python3 0xeeTerm {action}"
+
+    if IS_VPS:
+        print(f"[\033[93mVPS\033[0m] Triggering 0xeeTerm {action} locally...\n")
+        subprocess.run(remote_cmd, shell=True)
+    else:
+        print(f"[\033[95mBRIDGE\033[0m] Triggering 0xeeTerm {action} on {VPS_IP}...\n")
+        subprocess.run(["ssh", "-p", VPS_PORT, f"{VPS_USER}@{VPS_IP}", remote_cmd])
+
+
 def sys_status():
     if IS_VPS:
         print("[\033[93mVPS\033[0m] Lecture directe des senseurs systemd...\n")
@@ -128,23 +190,36 @@ def sys_logs():
 
 def show_help():
     print_banner()
-    print("Usage: nexus [commande]\n")
-    
+    print("Usage: nexus [command]\n")
+
+    print("\033[96m[ GLOBAL ]\033[0m")
+    print("  check              : Validate all required .env variables")
+    print()
+
     if IS_VPS:
-        print("\033[93m[ COMMANDES VPS ]\033[0m")
-        print("  status   : Affiche l'état du Timer et du Service 0xeeTerm")
-        print("  logs     : Affiche les dernières lignes d'activité de 0xeeTerm\n")
+        print("\033[93m[ VPS COMMANDS ]\033[0m")
+        print("  status             : Show 0xeeTerm timer and service state")
+        print("  logs               : Show last 15 lines of 0xeeTerm activity")
+        print("  restart            : Restart the 0xeeTerm.timer systemd unit")
+        print("  trigger heartbeat  : Run a heartbeat cycle immediately")
+        print("  trigger mentions   : Run a mentions cycle immediately")
+        print()
     else:
-        print("\033[96m[ COMMANDES LOCALES & BRIDGE ]\033[0m")
-        print("  serve    : Lance le serveur web de test local")
-        print("  deploy   : Pousse le code vers le VPS (rsync)")
-        print("  backup   : Rapatrie la mémoire (logs/state.json) du VPS en local\n")
-        print("\033[93m[ COMMANDES DISTANTES (SSH) ]\033[0m")
-        print("  status   : Interroge l'état du Timer et du Service sur le VPS")
-        print("  logs     : Récupère les logs d'activité systemd de 0xeeTerm\n")
-        
+        print("\033[96m[ LOCAL & BRIDGE ]\033[0m")
+        print("  serve              : Start local web server on WEB_DIR:8000")
+        print("  deploy             : Push code to VPS via rsync (prompts confirmation)")
+        print("  backup             : Pull logs/state.json from VPS to local")
+        print()
+        print("\033[93m[ REMOTE (SSH) ]\033[0m")
+        print("  status             : Query timer and service state on VPS")
+        print("  logs               : Fetch last 15 lines of systemd logs from VPS")
+        print("  restart            : Restart 0xeeTerm.timer on VPS via SSH")
+        print("  trigger heartbeat  : Trigger a heartbeat run on VPS via SSH")
+        print("  trigger mentions   : Trigger a mentions run on VPS via SSH")
+        print()
+
     mode = "VPS" if IS_VPS else "LOCAL"
-    print(f"Mode de fonctionnement actuel : \033[93m{mode}\033[0m")
+    print(f"Current mode: \033[93m{mode}\033[0m")
 
 if __name__ == "__main__":
     # Rendre le script exécutable s'il ne l'est pas
@@ -166,8 +241,17 @@ if __name__ == "__main__":
         sys_status()
     elif cmd == "logs":
         sys_logs()
+    elif cmd == "restart":
+        restart()
+    elif cmd == "check":
+        check()
+    elif cmd == "trigger":
+        if len(sys.argv) < 3:
+            print(f"[\033[91mERROR\033[0m] Usage: nexus trigger [heartbeat|mentions]")
+            sys.exit(1)
+        trigger(sys.argv[2])
     elif cmd in ["help", "-h", "--help"]:
         show_help()
     else:
-        print(f"[\033[91mERREUR\033[0m] Commande '{cmd}' non reconnue.")
+        print(f"[\033[91mERROR\033[0m] Unknown command '{cmd}'.")
         show_help()
