@@ -84,12 +84,12 @@ Write a reply or return SKIP."""
 # ─────────────────────────────────────────────
 
 def get_client() -> tweepy.Client:
+    """Initialise le client Tweepy strictement en mode User Context (OAuth 1.0a)"""
     return tweepy.Client(
-        bearer_token=os.getenv("X_BEARER_TOKEN"),
         consumer_key=os.getenv("X_API_KEY"),
         consumer_secret=os.getenv("X_API_SECRET"),
         access_token=os.getenv("X_ACCESS_TOKEN"),
-        access_token_secret=os.getenv("X_ACCESS_TOKEN_SECRET"),
+        access_token_secret=os.getenv("X_ACCESS_SECRET"),
         wait_on_rate_limit=True,
     )
 
