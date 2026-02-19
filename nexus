@@ -47,28 +47,43 @@ def deploy():
         print("[\033[91mERREUR\033[0m] Opération interdite. Tu es déjà sur le VPS. Le déploiement se fait depuis la machine locale.")
         return
 
-    confirm = input(f"[\033[93mATTENTION\033[0m] Déployer sur {VPS_IP} avec --delete ? (y/N) : ").strip().lower()
-    if confirm != "y":
-        print("[\033[96mANNULÉ\033[0m] Déploiement annulé.")
-        return
-
-    print(f"[\033[95mBRIDGE\033[0m] Uplink vers {VPS_IP}...")
-    # nexus et .env sont synchronisés. Seul venv/ et logs/ sont protégés.
-    cmd = [
+    base_cmd = [
         "rsync", "-avz", "--delete",
-        "--exclude", ".git", 
-        "--exclude", "__pycache__", 
+        "--exclude", ".git",
+        "--exclude", "__pycache__",
         "--exclude", "venv/",
-        "--exclude", "logs/",  
+        "--exclude", "logs/",
         "-e", f"ssh -p {VPS_PORT}",
         LOCAL_DIR,
         f"{VPS_USER}@{VPS_IP}:{REMOTE_DIR}"
     ]
+
+    print(f"[\033[95mBRIDGE\033[0m] Dry-run — scanning changes against {VPS_IP}...\n")
+    dry = subprocess.run(base_cmd + ["--dry-run", "--itemize-changes"],
+                         capture_output=True, text=True)
+    lines = [l for l in dry.stdout.splitlines() if l.strip()]
+    if not lines:
+        print("[\033[92mNO CHANGES\033[0m] Remote is already up to date.")
+        return
+
+    for line in lines:
+        # rsync itemize format: first char indicates the change type
+        flag = line[0] if line else " "
+        color = "\033[91m" if flag == "d" else "\033[93m" if flag == "*" else "\033[96m"
+        print(f"  {color}{line}\033[0m")
+
+    print(f"\n  {len(lines)} file(s) to sync.")
+    confirm = input(f"\n[\033[93mWARNING\033[0m] Deploy to {VPS_IP} with --delete? (y/N) : ").strip().lower()
+    if confirm != "y":
+        print("[\033[96mCANCELLED\033[0m] Deploy aborted.")
+        return
+
+    print(f"\n[\033[95mBRIDGE\033[0m] Uplink to {VPS_IP}...")
     try:
-        subprocess.run(cmd, check=True)
-        print(f"\n[\033[92mSUCCÈS\033[0m] Code et .env injectés dans la matrice distante.")
+        subprocess.run(base_cmd, check=True)
+        print(f"\n[\033[92mSUCCESS\033[0m] Code synced to remote.")
     except subprocess.CalledProcessError:
-        print(f"\n[\033[91mÉCHEC\033[0m] La synchronisation a échoué.")
+        print(f"\n[\033[91mFAIL\033[0m] Sync failed.")
 
 def backup():
     """Rapatrie la mémoire (logs et state.json) du VPS vers la machine locale."""
