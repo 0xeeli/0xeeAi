@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 import os
 import sys
+import json
 import subprocess
 import http.server
 import socketserver
 import getpass
+from pathlib import Path
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 
 # On charge le .env situé dans le même dossier que nexus
@@ -21,6 +24,12 @@ WEB_DIR = os.getenv("WEB_DIR", "./")
 # --- DÉTECTION D'ENVIRONNEMENT ---
 CURRENT_USER = getpass.getuser()
 IS_VPS = (CURRENT_USER == VPS_USER)
+
+# --- CHEMINS SYSTÈMES ---
+INFRA_DIR    = Path(__file__).parent / "infra"
+SYSTEMD_DIR  = Path("/etc/systemd/system")
+MANIFEST_DIR = Path.home() / ".local" / "share" / "0xeeAI"
+MANIFEST_FILE = MANIFEST_DIR / "installed_files.json"
 
 def print_banner():
     print("\033[92m")
@@ -47,30 +56,45 @@ def deploy():
         print("[\033[91mERREUR\033[0m] Opération interdite. Tu es déjà sur le VPS. Le déploiement se fait depuis la machine locale.")
         return
 
-    base_cmd = [
-        "rsync", "-avz", "--delete",
+    excludes = [
         "--exclude", ".git",
         "--exclude", "__pycache__",
         "--exclude", "venv/",
         "--exclude", "logs/",
-        "-e", f"ssh -p {VPS_PORT}",
-        LOCAL_DIR,
-        f"{VPS_USER}@{VPS_IP}:{REMOTE_DIR}"
+    ]
+    ssh_opt = ["-e", f"ssh -p {VPS_PORT}"]
+    src_dst = [LOCAL_DIR, f"{VPS_USER}@{VPS_IP}:{REMOTE_DIR}"]
+
+    # Dry-run: no -v to avoid rsync summary noise, itemize gives us raw change codes
+    print(f"[\033[95mBRIDGE\033[0m] Dry-run — scanning changes against {VPS_IP}...\n")
+    dry = subprocess.run(
+        ["rsync", "-az", "--delete", "--itemize-changes", "--dry-run"]
+        + excludes + ssh_opt + src_dst,
+        capture_output=True, text=True
+    )
+
+    # Keep only meaningful change lines — skip dir-only timestamp updates (.d..t......)
+    SKIP_PREFIXES = (".d", "sending ", "sent ", "total size", "cannot ")
+    lines = [
+        l for l in dry.stdout.splitlines()
+        if l.strip() and not any(l.startswith(p) for p in SKIP_PREFIXES)
     ]
 
-    print(f"[\033[95mBRIDGE\033[0m] Dry-run — scanning changes against {VPS_IP}...\n")
-    dry = subprocess.run(base_cmd + ["--dry-run", "--itemize-changes"],
-                         capture_output=True, text=True)
-    lines = [l for l in dry.stdout.splitlines() if l.strip()]
     if not lines:
         print("[\033[92mNO CHANGES\033[0m] Remote is already up to date.")
         return
 
     for line in lines:
-        # rsync itemize format: first char indicates the change type
-        flag = line[0] if line else " "
-        color = "\033[91m" if flag == "d" else "\033[93m" if flag == "*" else "\033[96m"
-        print(f"  {color}{line}\033[0m")
+        if line.startswith("*deleting"):
+            color = "\033[91m"   # red   — deletion
+            label = f"  DEL  {line.split()[-1]}"
+        elif line[1] == "f":
+            color = "\033[93m"   # yellow — file modified or new
+            label = f"  MOD  {line.split()[-1]}"
+        else:
+            color = "\033[96m"   # cyan  — other (symlink, etc.)
+            label = f"  SYN  {line.split()[-1]}"
+        print(f"{color}{label}\033[0m")
 
     print(f"\n  {len(lines)} file(s) to sync.")
     confirm = input(f"\n[\033[93mWARNING\033[0m] Deploy to {VPS_IP} with --delete? (y/N) : ").strip().lower()
@@ -80,7 +104,10 @@ def deploy():
 
     print(f"\n[\033[95mBRIDGE\033[0m] Uplink to {VPS_IP}...")
     try:
-        subprocess.run(base_cmd, check=True)
+        subprocess.run(
+            ["rsync", "-avz", "--delete"] + excludes + ssh_opt + src_dst,
+            check=True
+        )
         print(f"\n[\033[92mSUCCESS\033[0m] Code synced to remote.")
     except subprocess.CalledProcessError:
         print(f"\n[\033[91mFAIL\033[0m] Sync failed.")
@@ -121,7 +148,6 @@ def check():
         "X_API_SECRET":        os.getenv("X_API_SECRET"),
         "X_ACCESS_TOKEN":      os.getenv("X_ACCESS_TOKEN"),
         "X_ACCESS_SECRET":     os.getenv("X_ACCESS_SECRET"),
-        "X_BEARER_TOKEN":      os.getenv("X_BEARER_TOKEN"),
         "SOLANA_WALLET":       os.getenv("SOLANA_WALLET"),
     }
     print_banner()
@@ -173,6 +199,110 @@ def trigger(action: str):
         subprocess.run(["ssh", "-p", VPS_PORT, f"{VPS_USER}@{VPS_IP}", remote_cmd])
 
 
+def ssh():
+    """Open an interactive SSH shell on the VPS."""
+    if IS_VPS:
+        print("[\033[91mERROR\033[0m] Already on the VPS.")
+        return
+    print(f"[\033[95mBRIDGE\033[0m] Connecting to {VPS_USER}@{VPS_IP}:{VPS_PORT}...\n")
+    os.execvp("ssh", ["ssh", "-p", VPS_PORT, f"{VPS_USER}@{VPS_IP}"])
+
+
+def _install_status():
+    """Show installed units and their live systemctl state."""
+    if not MANIFEST_FILE.exists():
+        print("[\033[93mINFO\033[0m] No manifest found — nothing installed yet.")
+        return
+
+    with open(MANIFEST_FILE) as f:
+        manifest = json.load(f)
+
+    print(f"[\033[96mINSTALL STATUS\033[0m] Installed on: {manifest.get('installed_at', 'unknown')}\n")
+    for path in manifest.get("files", []):
+        unit = Path(path).name
+        result = subprocess.run(
+            ["systemctl", "is-active", unit],
+            capture_output=True, text=True
+        )
+        active = result.stdout.strip()
+        color = "\033[92m" if active == "active" else "\033[91m"
+        print(f"  {color}{active:<12}\033[0m {unit}")
+
+
+def install(show_status: bool = False):
+    """Copy infra/ units to systemd, enable timers, write manifest."""
+    if show_status:
+        _install_status()
+        return
+
+    units = sorted(INFRA_DIR.glob("*.service")) + sorted(INFRA_DIR.glob("*.timer"))
+    if not units:
+        print(f"[\033[91mERROR\033[0m] No .service or .timer files found in {INFRA_DIR}")
+        sys.exit(1)
+
+    print("[\033[96mINSTALL\033[0m] Copying systemd units to /etc/systemd/system/...\n")
+    installed = []
+    for unit in units:
+        dest = SYSTEMD_DIR / unit.name
+        result = subprocess.run(["sudo", "cp", str(unit), str(dest)])
+        if result.returncode == 0:
+            print(f"  [\033[92mOK\033[0m]    {unit.name} → {dest}")
+            installed.append(str(dest))
+        else:
+            print(f"  [\033[91mFAIL\033[0m]  {unit.name}")
+
+    print("\n[\033[96mINSTALL\033[0m] Running daemon-reload...")
+    subprocess.run(["sudo", "systemctl", "daemon-reload"])
+
+    timers = [u.name for u in units if u.suffix == ".timer"]
+    for timer in timers:
+        print(f"[\033[96mINSTALL\033[0m] Enabling and starting {timer}...")
+        subprocess.run(["sudo", "systemctl", "enable", "--now", timer])
+
+    MANIFEST_DIR.mkdir(parents=True, exist_ok=True)
+    manifest = {
+        "installed_at": datetime.now(timezone.utc).isoformat(),
+        "files": installed,
+    }
+    with open(MANIFEST_FILE, "w") as f:
+        json.dump(manifest, f, indent=2)
+
+    print(f"\n[\033[92mSUCCESS\033[0m] {len(installed)} unit(s) installed.")
+    print(f"[\033[96mMANIFEST\033[0m] Written to {MANIFEST_FILE}")
+
+
+def uninstall():
+    """Stop, disable, and remove all units listed in the manifest."""
+    if not MANIFEST_FILE.exists():
+        print("[\033[91mERROR\033[0m] No manifest found at {MANIFEST_FILE}. Nothing to uninstall.")
+        return
+
+    with open(MANIFEST_FILE) as f:
+        manifest = json.load(f)
+
+    files = manifest.get("files", [])
+    if not files:
+        print("[\033[93mWARN\033[0m] Manifest is empty. Nothing to remove.")
+        MANIFEST_FILE.unlink()
+        return
+
+    print("[\033[91mUNINSTALL\033[0m] Stopping and disabling units...\n")
+    for path in files:
+        unit = Path(path).name
+        print(f"  Stopping   {unit}...")
+        subprocess.run(["sudo", "systemctl", "stop",    unit])
+        subprocess.run(["sudo", "systemctl", "disable", unit])
+        print(f"  Removing   {path}...")
+        subprocess.run(["sudo", "rm", "-f", path])
+        print()
+
+    print("[\033[91mUNINSTALL\033[0m] Running daemon-reload...")
+    subprocess.run(["sudo", "systemctl", "daemon-reload"])
+
+    MANIFEST_FILE.unlink()
+    print(f"\n[\033[92mDONE\033[0m] All units removed. Manifest cleaned.")
+
+
 def sys_status():
     if IS_VPS:
         print("[\033[93mVPS\033[0m] Lecture directe des senseurs systemd...\n")
@@ -218,12 +348,16 @@ def show_help():
         print("  restart            : Restart the 0xeeTerm.timer systemd unit")
         print("  trigger heartbeat  : Run a heartbeat cycle immediately")
         print("  trigger mentions   : Run a mentions cycle immediately")
+        print("  install            : Copy infra/ units to systemd and enable timers")
+        print("  install --status   : Show installed units and their live state")
+        print("  uninstall          : Stop, disable and remove all installed units")
         print()
     else:
         print("\033[96m[ LOCAL & BRIDGE ]\033[0m")
         print("  serve              : Start local web server on WEB_DIR:8000")
         print("  deploy             : Push code to VPS via rsync (prompts confirmation)")
         print("  backup             : Pull logs/state.json from VPS to local")
+        print("  ssh                : Open an interactive shell on the VPS")
         print()
         print("\033[93m[ REMOTE (SSH) ]\033[0m")
         print("  status             : Query timer and service state on VPS")
@@ -231,6 +365,11 @@ def show_help():
         print("  restart            : Restart 0xeeTerm.timer on VPS via SSH")
         print("  trigger heartbeat  : Trigger a heartbeat run on VPS via SSH")
         print("  trigger mentions   : Trigger a mentions run on VPS via SSH")
+        print()
+        print("\033[95m[ SYSTEMD (run on VPS) ]\033[0m")
+        print("  install            : Copy infra/ units to systemd and enable timers")
+        print("  install --status   : Show installed units and their live state")
+        print("  uninstall          : Stop, disable and remove all installed units")
         print()
 
     mode = "VPS" if IS_VPS else "LOCAL"
@@ -265,6 +404,12 @@ if __name__ == "__main__":
             print(f"[\033[91mERROR\033[0m] Usage: nexus trigger [heartbeat|mentions]")
             sys.exit(1)
         trigger(sys.argv[2])
+    elif cmd == "ssh":
+        ssh()
+    elif cmd == "install":
+        install(show_status="--status" in sys.argv)
+    elif cmd == "uninstall":
+        uninstall()
     elif cmd in ["help", "-h", "--help"]:
         show_help()
     else:

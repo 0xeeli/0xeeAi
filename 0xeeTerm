@@ -81,7 +81,7 @@ def save_public_data(state: dict, status: dict):
     public_data = {
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "finance": status,
-        "history": state.get("tweet_history", []),
+        "recent_tweets": state.get("tweet_history", []),
         "tweets_posted": state.get("tweets_posted", 0),
     }
     with open(public_file, "w") as f:
