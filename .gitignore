@@ -1,2 +1,15 @@
+# Environment and secrets (CRITICAL)
 .env
 venv/
+
+# AI memory and logs (Never version state)
+logs/*.log
+logs/state.json
+
+# Python cache (Auto-generated pre-compiled files)
+__pycache__/
+*.pyc
+*.egg-info/
+
+# System files (Mac/Linux)
+.DS_Store
