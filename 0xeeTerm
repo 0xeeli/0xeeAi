@@ -223,9 +223,9 @@ def run_memory():
     update_all_metrics()
     top = get_top_performers(5)
 
-    print("\n╔══════════════════════════════════════╗")
-    print("║     0xeeTerm — MEMORY REPORT          ║")
-    print("╚══════════════════════════════════════╝")
+    print("\n  ─────────────────────────────────────")
+    print("  0xeeTerm · MEMORY REPORT")
+    print("  ─────────────────────────────────────")
 
     if not top:
         print("  No tweets recorded yet.")
@@ -238,7 +238,7 @@ def run_memory():
         text = tweet['text']
         print(f"     {text[:80]}{'...' if len(text) > 80 else ''}")
 
-    print("\n══════════════════════════════════════\n")
+    print("\n  ─────────────────────────────────────\n")
 
 
 def main():
