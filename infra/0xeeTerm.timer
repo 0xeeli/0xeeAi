@@ -1,0 +1,11 @@
+[Unit]
+Description=Timer for 0xeeAI Broadcast
+
+[Timer]
+# Attend 5 minutes après un redémarrage du serveur
+OnBootSec=5min
+# Exécute toutes les 4 heures
+OnUnitActiveSec=4h
+
+[Install]
+WantedBy=timers.target

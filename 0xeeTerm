@@ -1,0 +1,192 @@
+#!/usr/bin/env python3
+"""
+╔═══════════════════════════════════════════╗
+║           0xeeTerm — Phase 1              ║
+║     Digital survival engine for $0xEE    ║
+║         Running on ai.0xee.li             ║
+╚═══════════════════════════════════════════╝
+
+Manages X/Twitter account for the $0xEE survival project.
+Posts heartbeats, tracks treasury, documents survival in real-time.
+"""
+
+import os
+import sys
+import json
+import time
+import logging
+import argparse
+from datetime import datetime, timezone
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load .env
+load_dotenv(Path(__file__).parent / ".env")
+
+# Setup logging
+LOG_DIR = Path(__file__).parent / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(name)s] %(levelname)s — %(message)s",
+    handlers=[
+        logging.FileHandler(LOG_DIR / "heartbeat.log"),
+        logging.StreamHandler(sys.stdout),
+    ],
+)
+logger = logging.getLogger("0xeeTerm")
+
+# Import modules
+sys.path.insert(0, str(Path(__file__).parent))
+from modules.twitter import post_tweet, get_mentions
+from modules.solana import get_survival_status
+from tweets.templates import (
+    get_heartbeat_tweet,
+    get_daily_report_tweet,
+    get_launch_tweet,
+)
+
+# State file to track last actions
+STATE_FILE = Path(__file__).parent / "logs" / "state.json"
+
+
+def load_state() -> dict:
+    if STATE_FILE.exists():
+        with open(STATE_FILE) as f:
+            return json.load(f)
+    return {
+        "last_heartbeat": None,
+        "last_daily_report": None,
+        "last_mention_id": None,
+        "tweets_posted": 0,
+        "launched": False,
+    }
+
+
+def save_state(state: dict):
+    with open(STATE_FILE, "w") as f:
+        json.dump(state, f, indent=2)
+
+
+def should_post_heartbeat(state: dict, interval_hours: int = 2) -> bool:
+    if not state.get("last_heartbeat"):
+        return True
+    last = datetime.fromisoformat(state["last_heartbeat"])
+    now = datetime.now(timezone.utc)
+    elapsed = (now - last).total_seconds() / 3600
+    return elapsed >= interval_hours
+
+
+def should_post_daily_report(state: dict) -> bool:
+    if not state.get("last_daily_report"):
+        return True
+    last = datetime.fromisoformat(state["last_daily_report"])
+    now = datetime.now(timezone.utc)
+    elapsed = (now - last).total_seconds() / 3600
+    return elapsed >= 24
+
+
+def run_heartbeat():
+    """Post a context-aware heartbeat tweet."""
+    logger.info("Running heartbeat cycle...")
+    state = load_state()
+    status = get_survival_status()
+    logger.info(f"Survival status: {status}")
+
+    if not state.get("launched"):
+        tweet_text = get_launch_tweet()
+        result = post_tweet(tweet_text)
+        if result:
+            state["launched"] = True
+            state["tweets_posted"] = state.get("tweets_posted", 0) + 1
+            logger.info("Launch tweet posted!")
+        save_state(state)
+        return
+
+    if should_post_daily_report(state):
+        tweet_text = get_daily_report_tweet(status)
+        result = post_tweet(tweet_text)
+        if result:
+            state["last_daily_report"] = datetime.now(timezone.utc).isoformat()
+            state["tweets_posted"] = state.get("tweets_posted", 0) + 1
+            logger.info("Daily report posted!")
+        save_state(state)
+        return
+
+    if should_post_heartbeat(state):
+        tweet_text = get_heartbeat_tweet(status)
+        result = post_tweet(tweet_text)
+        if result:
+            state["last_heartbeat"] = datetime.now(timezone.utc).isoformat()
+            state["tweets_posted"] = state.get("tweets_posted", 0) + 1
+            logger.info(f"Heartbeat posted! Total tweets: {state['tweets_posted']}")
+    else:
+        logger.info("Heartbeat not due yet — skipping.")
+
+    save_state(state)
+
+
+def run_status():
+    """Print current survival status to console."""
+    status = get_survival_status()
+    state = load_state()
+
+    print("\n╔══════════════════════════════════╗")
+    print("║     0xeeTerm — STATUS REPORT      ║")
+    print("╚══════════════════════════════════╝")
+    print(f"  💰 Treasury     : ${status['balance_usd']:.2f} ({status['balance_sol']:.4f} SOL)")
+    print(f"  📈 SOL Price    : ${status['sol_price']:.2f}")
+    print(f"  🎯 Monthly Rent : ${status['monthly_rent']:.2f}")
+    print(f"  📊 Funded       : {status['survival_pct']:.1f}%")
+    print(f"  🗓️  Months covered: {status['months_covered']:.2f}")
+    print(f"  🐦 Tweets posted: {state.get('tweets_posted', 0)}")
+    print(f"  ⏱️  Last heartbeat: {state.get('last_heartbeat', 'Never')}")
+    print(f"  🚀 Launched     : {state.get('launched', False)}")
+    print("══════════════════════════════════\n")
+
+
+def run_daemon(interval_minutes: int = 30):
+    """Run 0xeeTerm as a daemon, checking every N minutes."""
+    logger.info(f"0xeeTerm daemon started — checking every {interval_minutes} min")
+    while True:
+        try:
+            run_heartbeat()
+        except Exception as e:
+            logger.error(f"Heartbeat error: {e}")
+        time.sleep(interval_minutes * 60)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="0xeeTerm — Digital survival engine for $0xEE"
+    )
+    parser.add_argument(
+        "command",
+        choices=["heartbeat", "status", "daemon", "launch"],
+        help="Command to run",
+    )
+    parser.add_argument(
+        "--interval",
+        type=int,
+        default=30,
+        help="Daemon check interval in minutes (default: 30)",
+    )
+
+    args = parser.parse_args()
+
+    if args.command == "heartbeat":
+        run_heartbeat()
+    elif args.command == "status":
+        run_status()
+    elif args.command == "daemon":
+        run_daemon(args.interval)
+    elif args.command == "launch":
+        state = load_state()
+        state["launched"] = False
+        save_state(state)
+        run_heartbeat()
+
+
+if __name__ == "__main__":
+    main()

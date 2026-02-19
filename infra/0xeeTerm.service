@@ -1,0 +1,11 @@
+[Unit]
+Description=0xeeTerm — $0xEE Survival Engine
+After=network.target
+
+[Service]
+Type=oneshot
+User=debian
+WorkingDirectory=/home/debian/0xeeAI
+ExecStart=/home/debian/0xeeAI/venv/bin/python3 /home/debian/0xeeAI/0xeeTerm heartbeat
+StandardOutput=append:/home/debian/0xeeAI/logs/heartbeat.log
+StandardError=append:/home/debian/0xeeAI/logs/heartbeat.log

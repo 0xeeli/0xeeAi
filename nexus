@@ -1,0 +1,127 @@
+#!/usr/bin/env python3
+import os
+import sys
+import subprocess
+import http.server
+import socketserver
+import getpass
+from dotenv import load_dotenv
+
+# On charge le .env situé dans le même dossier que nexus
+load_dotenv()
+
+# --- CONFIGURATION RÉCUPÉRÉE DEPUIS LE .ENV ---
+VPS_USER = os.getenv("VPS_USER", "debian")
+VPS_IP = os.getenv("VPS_IP")
+VPS_PORT = os.getenv("VPS_PORT", "22")
+LOCAL_DIR = os.getenv("LOCAL_DIR")
+REMOTE_DIR = os.getenv("REMOTE_DIR")
+WEB_DIR = os.getenv("WEB_DIR")
+
+# --- DÉTECTION D'ENVIRONNEMENT ---
+CURRENT_USER = getpass.getuser()
+IS_VPS = (CURRENT_USER == VPS_USER)
+
+def print_banner():
+    print("\033[92m")
+    print("==================================================")
+    print("  0xee_NEXUS // OMNI-ENVIRONMENT TERMINAL         ")
+    print("==================================================")
+    print("\033[0m")
+
+def serve():
+    PORT = 8000
+    try:
+        os.chdir(WEB_DIR)
+        loc = "VPS" if IS_VPS else "LOCAL"
+        print(f"[\033[96m{loc}\033[0m] Serveur web sur http://localhost:{PORT} (Ctrl+C pour stopper)")
+        with socketserver.TCPServer(("", PORT), http.server.SimpleHTTPRequestHandler) as httpd:
+            httpd.serve_forever()
+    except FileNotFoundError:
+        print(f"[\033[91mERREUR\033[0m] Dossier '{WEB_DIR}' introuvable depuis {os.getcwd()}.")
+    except KeyboardInterrupt:
+        print("\n[\033[96mSYSTÈME\033[0m] Extinction du serveur.")
+
+def deploy():
+    if IS_VPS:
+        print("[\033[91mERREUR\033[0m] Opération interdite. Tu es déjà sur le VPS. Le déploiement se fait depuis la machine locale.")
+        return
+
+    print(f"[\033[95mBRIDGE\033[0m] Uplink vers {VPS_IP}...")
+    # nexus et .env sont synchronisés. Seul venv/ est protégé.
+    cmd = [
+        "rsync", "-avz", "--delete",
+        "--exclude", ".git", 
+        "--exclude", "__pycache__", 
+        "--exclude", "venv/",  
+        "-e", f"ssh -p {VPS_PORT}",
+        LOCAL_DIR,
+        f"{VPS_USER}@{VPS_IP}:{REMOTE_DIR}"
+    ]
+    try:
+        subprocess.run(cmd, check=True)
+        print(f"\n[\033[92mSUCCÈS\033[0m] Code et .env injectés dans la matrice distante.")
+    except subprocess.CalledProcessError:
+        print(f"\n[\033[91mÉCHEC\033[0m] La synchronisation a échoué.")
+
+def sys_status():
+    if IS_VPS:
+        print("[\033[93mVPS\033[0m] Lecture directe des senseurs systemd...\n")
+        cmd = "echo '\033[96m[--- ÉTAT DU TIMER ---]\033[0m'; systemctl list-timers | grep 0xeeTerm || echo 'Aucun timer actif.'; echo ''; echo '\033[96m[--- ÉTAT DU SERVICE ---]\033[0m'; systemctl status 0xeeTerm.service --no-pager || true"
+        subprocess.run(cmd, shell=True)
+    else:
+        print(f"[\033[95mBRIDGE\033[0m] Interrogation SSH sur {VPS_IP}...\n")
+        ssh_cmd = f"ssh -p {VPS_PORT} {VPS_USER}@{VPS_IP} \"echo '\033[96m[--- ÉTAT DU TIMER ---]\033[0m'; systemctl list-timers | grep 0xeeTerm || echo 'Aucun timer actif.'; echo ''; echo '\033[96m[--- ÉTAT DU SERVICE ---]\033[0m'; systemctl status 0xeeTerm.service --no-pager || true\""
+        subprocess.run(ssh_cmd, shell=True)
+
+def sys_logs():
+    if IS_VPS:
+        print("[\033[93mVPS\033[0m] Extraction locale des journaux...\n")
+        subprocess.run("journalctl -u 0xeeTerm.service -n 15 --no-pager", shell=True)
+    else:
+        print(f"[\033[95mBRIDGE\033[0m] Extraction SSH des journaux depuis {VPS_IP}...\n")
+        ssh_cmd = f"ssh -p {VPS_PORT} {VPS_USER}@{VPS_IP} \"journalctl -u 0xeeTerm.service -n 15 --no-pager\""
+        subprocess.run(ssh_cmd, shell=True)
+
+def show_help():
+    print_banner()
+    print("Usage: nexus [commande]\n")
+    
+    if IS_VPS:
+        print("\033[93m[ COMMANDES VPS ]\033[0m")
+        print("  status   : Affiche l'état du Timer et du Service 0xeeBot")
+        print("  logs     : Affiche les dernières lignes d'activité du Bot X\n")
+    else:
+        print("\033[96m[ COMMANDES LOCALES & BRIDGE ]\033[0m")
+        print("  serve    : Lance le serveur web de test local")
+        print("  deploy   : Pousse le code vers le VPS (rsync)\n")
+        print("\033[93m[ COMMANDES DISTANTES (SSH) ]\033[0m")
+        print("  status   : Interroge l'état du Timer et du Service sur le VPS")
+        print("  logs     : Récupère les logs d'activité du Bot X\n")
+        
+    mode = "VPS" if IS_VPS else "LOCAL"
+    print(f"Mode de fonctionnement actuel : \033[93m{mode}\033[0m")
+
+if __name__ == "__main__":
+    # Rendre le script exécutable s'il ne l'est pas
+    if not os.access(__file__, os.X_OK):
+        os.chmod(__file__, 0o755)
+
+    if len(sys.argv) < 2:
+        show_help()
+        sys.exit(0)
+    
+    cmd = sys.argv[1]
+    if cmd == "serve":
+        serve()
+    elif cmd == "deploy":
+        deploy()
+    elif cmd == "status":
+        sys_status()
+    elif cmd == "logs":
+        sys_logs()
+    elif cmd in ["help", "-h", "--help"]:
+        show_help()
+    else:
+        print(f"[\033[91mERREUR\033[0m] Commande '{cmd}' non reconnue.")
+        show_help()
