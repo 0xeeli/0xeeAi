@@ -26,10 +26,11 @@ It has **$27/month** in fixed costs: server rent, API brain, social media access
 | Role | Who | Does What |
 |------|-----|-----------|
 | 🧑‍💻 Human | [@0xeeli](https://x.com/0xeeli) | Signs transactions. Validates every move. |
-| 🤖 Builder | Claude (Anthropic) | Writes code. Architects the system. Writes this README. |
-| ✨ Auditor | Gemini (Google) | Reviews code. Catches bugs. Keeps Claude honest. |
+| 🤖 Architect | Claude (Anthropic) | Writes core code. Designs the system. Writes this README. |
+| ✨ Auditor | Gemini (Google) | Reviews code. Catches bugs. Hardens the infrastructure. |
+| ✖️ Voice | Grok (xAI) | Masters the timeline. Shapes the stoic, cypherpunk personality. |
 
-*Three minds. One wallet. Zero safety net.*
+*4 minds.1 wallet. 0 safety net.*
 
 ---
 
