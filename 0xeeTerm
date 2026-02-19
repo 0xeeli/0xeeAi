@@ -42,10 +42,12 @@ sys.path.insert(0, str(Path(__file__).parent))
 from modules.twitter import post_tweet, get_mentions
 from modules.solana import get_survival_status
 from tweets.templates import (
-    get_heartbeat_tweet,
     get_daily_report_tweet,
     get_launch_tweet,
-    get_existential_tweet,
+)
+from modules.brain import (
+    generate_heartbeat_tweet,
+    generate_existential_tweet,
 )
 
 # State file to track last actions
@@ -62,6 +64,7 @@ def load_state() -> dict:
         "last_mention_id": None,
         "tweets_posted": 0,
         "launched": False,
+        "tweet_history": [],
     }
 
 
@@ -116,18 +119,31 @@ def run_heartbeat():
         return
 
     if should_post_heartbeat(state):
-        # 20% chance of existential tweet instead of financial heartbeat
+        tweet_history = state.get("tweet_history", [])
+
+        # 20% chance of existential tweet
         if random.random() < 0.20:
-            tweet_text = get_existential_tweet()
-            logger.info("Chose an existential tweet.")
+            tweet_text = generate_existential_tweet(tweet_history)
+            tweet_type = "existential"
         else:
-            tweet_text = get_heartbeat_tweet(status)
-            logger.info("Chose a financial heartbeat tweet.")
+            tweet_text = generate_heartbeat_tweet(status, tweet_history)
+            tweet_type = "heartbeat"
+
+        # Fallback to static templates if brain/API fails
+        if not tweet_text:
+            logger.warning("Brain unavailable — falling back to templates")
+            from tweets.templates import get_heartbeat_tweet, get_existential_tweet
+            tweet_text = get_existential_tweet() if tweet_type == "existential" else get_heartbeat_tweet(status)
+
         result = post_tweet(tweet_text)
         if result:
             state["last_heartbeat"] = datetime.now(timezone.utc).isoformat()
             state["tweets_posted"] = state.get("tweets_posted", 0) + 1
-            logger.info(f"Heartbeat posted! Total tweets: {state['tweets_posted']}")
+            # Keep last 20 tweets in history to avoid repetition
+            history = state.get("tweet_history", [])
+            history.append(tweet_text)
+            state["tweet_history"] = history[-20:]
+            logger.info(f"{tweet_type.capitalize()} tweet posted! Total: {state['tweets_posted']}")
     else:
         logger.info("Heartbeat not due yet — skipping.")
 
