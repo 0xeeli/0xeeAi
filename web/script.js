@@ -127,7 +127,42 @@ document.addEventListener('DOMContentLoaded', () => {
 const TREASURY_WALLET = "4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr";
 const MEMO_PROGRAM_ID  = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLzncY";
 const TOLL_LAMPORTS    = 5_000_000; // 0.005 SOL
-const SOLANA_RPC       = "https://api.mainnet-beta.solana.com";
+
+// Public RPCs tried in order — wallet sends the tx itself, we only need a blockhash
+const SOLANA_RPCS = [
+    "https://rpc.ankr.com/solana",
+    "https://api.mainnet-beta.solana.com",
+];
+
+async function _getBlockhash() {
+    for (const url of SOLANA_RPCS) {
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    jsonrpc: '2.0', id: 1,
+                    method: 'getLatestBlockhash',
+                    params: [{ commitment: 'confirmed' }]
+                })
+            });
+            if (!res.ok) continue;
+            const json = await res.json();
+            if (json.result?.value?.blockhash) return json.result.value.blockhash;
+        } catch (_) { /* try next */ }
+    }
+    throw new Error('All RPCs failed — try again later.');
+}
+
+// Detect any compatible Solana wallet (Phantom, Solflare, Backpack, …)
+function _detectWallet() {
+    if (window.phantom?.solana)      return window.phantom.solana; // Phantom v2+
+    if (window.solana?.isPhantom)    return window.solana;          // Phantom legacy
+    if (window.solflare?.isSolflare) return window.solflare;        // Solflare
+    if (window.backpack?.isBackpack) return window.backpack;         // Backpack
+    if (window.solana)               return window.solana;           // Generic fallback
+    return null;
+}
 
 async function payNexusToll() {
     const btn      = document.getElementById('pay-toll-btn');
@@ -144,8 +179,9 @@ async function payNexusToll() {
         return;
     }
 
-    if (!window.solana || !window.solana.isPhantom) {
-        setStatus('Phantom not detected — install it at phantom.app', '#ff3333');
+    const wallet = _detectWallet();
+    if (!wallet) {
+        setStatus('No Solana wallet detected. Install Phantom, Solflare, or Backpack.', '#ff3333');
         return;
     }
 
@@ -153,21 +189,18 @@ async function payNexusToll() {
     setStatus('Connecting wallet...', 'var(--text-muted)');
 
     try {
-        await window.solana.connect();
-        const sender = window.solana.publicKey;
+        await wallet.connect();
+        const sender = wallet.publicKey;
 
         setStatus('Fetching blockhash...', 'var(--text-muted)');
-        const connection = new solanaWeb3.Connection(SOLANA_RPC, 'confirmed');
-        const { blockhash } = await connection.getLatestBlockhash();
+        const blockhash = await _getBlockhash();
 
-        // Transfer: 0.005 SOL → treasury
         const transferIx = solanaWeb3.SystemProgram.transfer({
             fromPubkey: sender,
             toPubkey:   new solanaWeb3.PublicKey(TREASURY_WALLET),
             lamports:   TOLL_LAMPORTS,
         });
 
-        // Memo: X handle encoded as UTF-8 (browser-safe, no Buffer needed)
         const memoIx = new solanaWeb3.TransactionInstruction({
             programId: new solanaWeb3.PublicKey(MEMO_PROGRAM_ID),
             keys:      [],
@@ -179,8 +212,8 @@ async function payNexusToll() {
         tx.feePayer = sender;
         tx.add(transferIx, memoIx);
 
-        setStatus('Waiting for Phantom approval...', 'var(--solana-purple)');
-        const { signature } = await window.solana.signAndSendTransaction(tx);
+        setStatus('Waiting for wallet approval...', 'var(--solana-purple)');
+        const { signature } = await wallet.signAndSendTransaction(tx);
 
         const short = signature.slice(0, 8) + '...';
         setStatus(`Toll received. Tx: ${short}`, 'var(--solana-green)');
