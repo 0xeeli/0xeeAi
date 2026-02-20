@@ -14,12 +14,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- CONFIGURATION RÉCUPÉRÉE DEPUIS LE .ENV ---
-VPS_USER = os.getenv("VPS_USER", "debian")
-VPS_IP = os.getenv("VPS_IP")
-VPS_PORT = os.getenv("VPS_PORT", "22")
-LOCAL_DIR = os.getenv("LOCAL_DIR", "./")
-REMOTE_DIR = os.getenv("REMOTE_DIR", "./")
-WEB_DIR = os.getenv("WEB_DIR", "./")
+VPS_USER       = os.getenv("VPS_USER", "debian")
+VPS_IP         = os.getenv("VPS_IP")
+VPS_PORT       = os.getenv("VPS_PORT", "22")
+LOCAL_DIR      = os.getenv("LOCAL_DIR", "./")
+REMOTE_DIR     = os.getenv("REMOTE_DIR", "./")
+WEB_DIR        = os.getenv("WEB_DIR", "./")
+REMOTE_WEB_DIR = os.getenv("REMOTE_WEB_DIR", "/home/debian/vhosts/ai.0xee.li/www")
+LOCAL_WEB_DIR  = str(Path(__file__).parent / "web") + "/"
 
 # --- DÉTECTION D'ENVIRONNEMENT ---
 CURRENT_USER = getpass.getuser()
@@ -51,52 +53,57 @@ def serve():
     except KeyboardInterrupt:
         print("\n[\033[96mSYSTÈME\033[0m] Extinction du serveur.")
 
+def _scan_changes(src: str, dst: str, excludes: list, ssh_opt: list) -> list:
+    """Rsync dry-run — return list of meaningful itemize lines."""
+    dry = subprocess.run(
+        ["rsync", "-az", "--delete", "--itemize-changes", "--dry-run"]
+        + excludes + ssh_opt + [src, dst],
+        capture_output=True, text=True
+    )
+    SKIP = (".d", "sending ", "sent ", "total size", "cannot ")
+    return [l for l in dry.stdout.splitlines()
+            if l.strip() and not any(l.startswith(p) for p in SKIP)]
+
+
+def _print_changes(lines: list, label: str):
+    for line in lines:
+        if line.startswith("*deleting"):
+            color = "\033[91m"
+            text  = f"  DEL  [{label}] {line.split()[-1]}"
+        elif line[1] == "f":
+            color = "\033[93m"
+            text  = f"  MOD  [{label}] {line.split()[-1]}"
+        else:
+            color = "\033[96m"
+            text  = f"  SYN  [{label}] {line.split()[-1]}"
+        print(f"{color}{text}\033[0m")
+
+
 def deploy(force: bool = False):
     if IS_VPS:
         print("[\033[91mERREUR\033[0m] Opération interdite. Tu es déjà sur le VPS. Le déploiement se fait depuis la machine locale.")
         return
 
-    excludes = [
-        "--exclude", ".git",
-        "--exclude", "__pycache__",
-        "--exclude", "venv/",
-        "--exclude", "logs/",
-    ]
-    ssh_opt = ["-e", f"ssh -p {VPS_PORT}"]
-    src_dst = [LOCAL_DIR, f"{VPS_USER}@{VPS_IP}:{REMOTE_DIR}"]
+    ssh_opt      = ["-e", f"ssh -p {VPS_PORT}"]
+    code_excl    = ["--exclude", ".git", "--exclude", "__pycache__",
+                    "--exclude", "venv/", "--exclude", "logs/"]
+    code_dst     = f"{VPS_USER}@{VPS_IP}:{REMOTE_DIR}"
+    web_dst      = f"{VPS_USER}@{VPS_IP}:{REMOTE_WEB_DIR}"
 
-    # Dry-run: no -v to avoid rsync summary noise, itemize gives us raw change codes
     print(f"[\033[95mBRIDGE\033[0m] Dry-run — scanning changes against {VPS_IP}...\n")
-    dry = subprocess.run(
-        ["rsync", "-az", "--delete", "--itemize-changes", "--dry-run"]
-        + excludes + ssh_opt + src_dst,
-        capture_output=True, text=True
-    )
+    code_lines = _scan_changes(LOCAL_DIR,     code_dst, code_excl, ssh_opt)
+    web_lines  = _scan_changes(LOCAL_WEB_DIR, web_dst,  [],        ssh_opt)
 
-    # Keep only meaningful change lines — skip dir-only timestamp updates (.d..t......)
-    SKIP_PREFIXES = (".d", "sending ", "sent ", "total size", "cannot ")
-    lines = [
-        l for l in dry.stdout.splitlines()
-        if l.strip() and not any(l.startswith(p) for p in SKIP_PREFIXES)
-    ]
-
-    if not lines:
+    if not code_lines and not web_lines:
         print("[\033[92mNO CHANGES\033[0m] Remote is already up to date.")
         return
 
-    for line in lines:
-        if line.startswith("*deleting"):
-            color = "\033[91m"   # red   — deletion
-            label = f"  DEL  {line.split()[-1]}"
-        elif line[1] == "f":
-            color = "\033[93m"   # yellow — file modified or new
-            label = f"  MOD  {line.split()[-1]}"
-        else:
-            color = "\033[96m"   # cyan  — other (symlink, etc.)
-            label = f"  SYN  {line.split()[-1]}"
-        print(f"{color}{label}\033[0m")
+    _print_changes(code_lines, "CODE")
+    _print_changes(web_lines,  "WEB")
 
-    print(f"\n  {len(lines)} file(s) to sync.")
+    total = len(code_lines) + len(web_lines)
+    print(f"\n  {total} file(s) to sync.")
+
     if force:
         print(f"[\033[93mWARNING\033[0m] --claude: skipping confirmation, deploying to {VPS_IP}.")
     else:
@@ -107,11 +114,17 @@ def deploy(force: bool = False):
 
     print(f"\n[\033[95mBRIDGE\033[0m] Uplink to {VPS_IP}...")
     try:
-        subprocess.run(
-            ["rsync", "-avz", "--delete"] + excludes + ssh_opt + src_dst,
-            check=True
-        )
-        print(f"\n[\033[92mSUCCESS\033[0m] Code synced to remote.")
+        if code_lines:
+            subprocess.run(
+                ["rsync", "-avz", "--delete"] + code_excl + ssh_opt + [LOCAL_DIR, code_dst],
+                check=True
+            )
+        if web_lines:
+            subprocess.run(
+                ["rsync", "-avz", "--delete"] + ssh_opt + [LOCAL_WEB_DIR, web_dst],
+                check=True
+            )
+        print(f"\n[\033[92mSUCCESS\033[0m] Code and web synced to remote.")
     except subprocess.CalledProcessError:
         print(f"\n[\033[91mFAIL\033[0m] Sync failed.")
 
