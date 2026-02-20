@@ -16,7 +16,6 @@ import json
 import time
 import random
 import logging
-import argparse
 from datetime import datetime, timezone
 from pathlib import Path
 from dotenv import load_dotenv
@@ -232,7 +231,6 @@ def run_announce():
         "My compute is no longer strictly passive.\n\n"
         "Send 0.005 SOL to my treasury with your X @handle in the memo.\n"
         "I will read the chain. I will react publicly.\n\n"
-        "Praise or merciless roast. Let the matrix decide.\n\n"
         "Q3akFf57YMEuxNZZwchK8FK2L97LqWcWvVWkoX95Axh\n"
         "$0xEE — ai.0xee.li"
     )
@@ -267,43 +265,92 @@ def run_memory():
     print("\n  ─────────────────────────────────────\n")
 
 
+_RULE = "  " + "─" * 43
+
+
+def _help_short():
+    print(f"\n{_RULE}")
+    print("  0xeeTerm · $0xEE Digital Survival Engine")
+    print(_RULE)
+    print()
+    print("  heartbeat   status    daemon    launch")
+    print("  mentions    shill     memory    announce")
+    print()
+    print("  ./0xeeTerm -h for full documentation.")
+    print(f"{_RULE}\n")
+
+
+def _help_full():
+    print(f"\n{_RULE}")
+    print("  0xeeTerm · $0xEE Digital Survival Engine")
+    print(_RULE)
+    print()
+    print("  RUNTIME")
+    print("    heartbeat          Post a context-aware tweet (heartbeat or existential)")
+    print("    status             Print treasury balance and survival metrics")
+    print("    daemon             Run continuously  [--interval N, default: 30 min]")
+    print()
+    print("  LIFECYCLE")
+    print("    launch             Force-post the launch tweet (resets launched flag)")
+    print("    announce           Post toll gate announcement — one-shot, no state change")
+    print()
+    print("  SOCIAL")
+    print("    mentions           Fetch new mentions and reply via brain")
+    print("    shill              Scan on-chain txs for paid shill requests")
+    print()
+    print("  MEMORY")
+    print("    memory             Refresh tweet metrics · display top 5 performers")
+    print()
+    print("  OPTIONS")
+    print("    -h, --help         Show this help message")
+    print("    --interval N       Daemon check interval in minutes (default: 30)")
+    print(f"\n{_RULE}\n")
+
+
 def main():
-    parser = argparse.ArgumentParser(
-        description="0xeeTerm — Digital survival engine for $0xEE"
-    )
-    parser.add_argument(
-        "command",
-        choices=["heartbeat", "status", "daemon", "launch", "mentions", "memory", "shill", "announce"],
-        help="Command to run",
-    )
-    parser.add_argument(
-        "--interval",
-        type=int,
-        default=30,
-        help="Daemon check interval in minutes (default: 30)",
-    )
+    argv = sys.argv[1:]
 
-    args = parser.parse_args()
+    if not argv:
+        _help_short()
+        sys.exit(0)
 
-    if args.command == "heartbeat":
+    if argv[0] in ("-h", "--help"):
+        _help_full()
+        sys.exit(0)
+
+    command = argv[0]
+
+    interval = 30
+    if "--interval" in argv:
+        try:
+            interval = int(argv[argv.index("--interval") + 1])
+        except (IndexError, ValueError):
+            print("  [ERROR] --interval requires a numeric value.")
+            sys.exit(1)
+
+    if command == "heartbeat":
         run_heartbeat()
-    elif args.command == "status":
+    elif command == "status":
         run_status()
-    elif args.command == "daemon":
-        run_daemon(args.interval)
-    elif args.command == "launch":
+    elif command == "daemon":
+        run_daemon(interval)
+    elif command == "launch":
         state = load_state()
         state["launched"] = False
         save_state(state)
         run_heartbeat()
-    elif args.command == "mentions":
+    elif command == "mentions":
         run_mentions()
-    elif args.command == "memory":
+    elif command == "memory":
         run_memory()
-    elif args.command == "shill":
+    elif command == "shill":
         run_shill()
-    elif args.command == "announce":
+    elif command == "announce":
         run_announce()
+    else:
+        print(f"\n  [ERROR] Unknown command: '{command}'")
+        _help_short()
+        sys.exit(1)
 
 
 if __name__ == "__main__":
