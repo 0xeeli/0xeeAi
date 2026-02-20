@@ -392,24 +392,32 @@ def swap_cmd(from_token: str, to_token: str, amount: str, now: bool = False):
 
 
 def sys_status():
+    remote_dir = REMOTE_DIR.rstrip('/')
+    remote_cmd = (
+        # Timers
+        "echo '\033[96m[--- TIMERS ---]\033[0m';"
+        "systemctl list-timers --no-pager | grep 0xeeTerm || echo 'Aucun timer actif.';"
+        "echo '';"
+        # Last service run
+        "echo '\033[96m[--- DERNIER RUN ---]\033[0m';"
+        "systemctl status 0xeeTerm.service --no-pager -n 3 || true;"
+        "echo '';"
+        # RAM
+        "echo '\033[96m[--- MÉMOIRE RAM ---]\033[0m';"
+        "free -h | awk 'NR==1{printf \"  %-12s %8s %8s %8s\\n\",$1,$2,$3,$4} NR==2{printf \"  %-12s %8s %8s %8s\\n\",$1,$2,$3,$4}';"
+        "echo '';"
+        # Disk — project dir
+        f"echo '\033[96m[--- DISQUE PROJET ({remote_dir}) ---]\033[0m';"
+        f"du -sh {remote_dir} 2>/dev/null | awk '{{printf \"  Projet : %s\\n\",$1}}';"
+        # Disk — total VPS
+        "df -h / | awk 'NR==2{printf \"  Disque : %s utilisés / %s total (%s)\\n\",$3,$2,$5}';"
+    )
+
     if IS_VPS:
-        print("[\033[93mVPS\033[0m] Lecture directe des senseurs systemd...\n")
-        print("\033[96m[--- ÉTAT DU TIMER ---]\033[0m")
-        result = subprocess.run(["systemctl", "list-timers"], capture_output=True, text=True)
-        lines = [l for l in result.stdout.splitlines() if "0xeeTerm" in l]
-        print("\n".join(lines) if lines else "Aucun timer actif.")
-        print()
-        print("\033[96m[--- ÉTAT DU SERVICE ---]\033[0m")
-        subprocess.run(["systemctl", "status", "0xeeTerm.service", "--no-pager"])
+        print("[\033[93mVPS\033[0m] Lecture directe des senseurs...\n")
+        subprocess.run(remote_cmd, shell=True)
     else:
         print(f"[\033[95mBRIDGE\033[0m] Interrogation SSH sur {VPS_IP}...\n")
-        remote_cmd = (
-            "echo '[--- ÉTAT DU TIMER ---]';"
-            "systemctl list-timers | grep 0xeeTerm || echo 'Aucun timer actif.';"
-            "echo '';"
-            "echo '[--- ÉTAT DU SERVICE ---]';"
-            "systemctl status 0xeeTerm.service --no-pager || true"
-        )
         subprocess.run(["ssh", "-p", VPS_PORT, f"{VPS_USER}@{VPS_IP}", remote_cmd])
 
 def sys_logs():
