@@ -19,6 +19,9 @@ async function syncWithMatrix() {
         const data = await response.json();
         console.log("[0xeeAI] Données reçues :", data);
 
+        // Capture RPC URL served by backend (Helius key never in git)
+        if (data.rpc_url) _rpcUrl = data.rpc_url;
+
         // ==========================================
         // 1. MISE À JOUR DU DASHBOARD (index.html)
         // ==========================================
@@ -128,14 +131,18 @@ const TREASURY_WALLET = "4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr";
 const MEMO_PROGRAM_ID  = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLzncY";
 const TOLL_LAMPORTS    = 5_000_000; // 0.005 SOL
 
-// Public RPCs tried in order — wallet sends the tx itself, we only need a blockhash
-const SOLANA_RPCS = [
+// RPC URL served dynamically from public.json (Helius key lives on VPS, never in git)
+let _rpcUrl = null;
+
+// Public fallback RPCs used only if _rpcUrl is not yet available
+const SOLANA_RPCS_FALLBACK = [
     "https://rpc.ankr.com/solana",
     "https://api.mainnet-beta.solana.com",
 ];
 
 async function _getBlockhash() {
-    for (const url of SOLANA_RPCS) {
+    const urls = _rpcUrl ? [_rpcUrl, ...SOLANA_RPCS_FALLBACK] : SOLANA_RPCS_FALLBACK;
+    for (const url of urls) {
         try {
             const res = await fetch(url, {
                 method: 'POST',

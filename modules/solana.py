@@ -11,6 +11,14 @@ logger = logging.getLogger("0xeeTerm.solana")
 
 LAMPORTS_PER_SOL = 1_000_000_000
 
+
+def _get_rpc() -> str:
+    """Return the best available RPC: Helius if key is set, else SOLANA_RPC env, else public fallback."""
+    key = os.getenv("HELIUS_API_KEY")
+    if key:
+        return f"https://mainnet.helius-rpc.com/?api-key={key}"
+    return _get_rpc()
+
 USDC_MINT    = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 JITOSOL_MINT = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
 
@@ -33,7 +41,7 @@ def get_sol_price_usd() -> float:
 
 def get_wallet_balance_sol() -> float:
     """Get wallet SOL balance via RPC."""
-    rpc = os.getenv("SOLANA_RPC", "https://api.mainnet-beta.solana.com")
+    rpc = _get_rpc()
     wallet = os.getenv("SOLANA_WALLET")
     try:
         payload = {
@@ -96,7 +104,7 @@ def get_spl_balances() -> dict:
     Returns dict with balance, price, and USD value for each token.
     Handles missing token accounts gracefully (returns 0.0).
     """
-    rpc    = os.getenv("SOLANA_RPC", "https://api.mainnet-beta.solana.com")
+    rpc    = _get_rpc()
     wallet = os.getenv("SOLANA_WALLET", "")
 
     if not wallet:

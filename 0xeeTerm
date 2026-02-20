@@ -79,12 +79,16 @@ def save_state(state: dict):
 
 def save_public_data(state: dict, status: dict, portfolio: dict = None):
     """Export live data for ai.0xee.li frontend."""
+    helius_key = os.getenv("HELIUS_API_KEY")
+    rpc_url = f"https://mainnet.helius-rpc.com/?api-key={helius_key}" if helius_key else None
+
     public_data = {
         "updated_at":    datetime.now(timezone.utc).isoformat(),
         "finance":       status,
         "portfolio":     portfolio,
         "recent_tweets": state.get("tweet_history", []),
         "tweets_posted": state.get("tweets_posted", 0),
+        "rpc_url":       rpc_url,
     }
     # Always write to logs/
     public_file = Path(__file__).parent / "logs" / "public.json"
