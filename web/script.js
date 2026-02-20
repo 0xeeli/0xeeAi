@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // NEXUS TOLL — Web3 DApp payment
 // ==========================================
 const TREASURY_WALLET = "4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr";
-const MEMO_PROGRAM_ID  = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLzncY";
+const MEMO_PROGRAM_ID  = "Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo"; // SPL Memo v1 — 43 chars, 32 bytes
 const TOLL_LAMPORTS    = 5_000_000; // 0.005 SOL
 
 // RPC URL served dynamically from public.json (Helius key lives on VPS, never in git)
