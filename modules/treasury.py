@@ -27,8 +27,9 @@ JITOSOL_MINT = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
 USDC_MINT    = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 MEMO_PROGRAM = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
 
-JUPITER_QUOTE = "https://quote-api.jup.ag/v6/quote"
-JUPITER_SWAP  = "https://quote-api.jup.ag/v6/swap"
+_JUPITER_BASE = os.getenv("JUPITER_API_URL", "https://lite-api.jup.ag/swap/v1")
+JUPITER_QUOTE = f"{_JUPITER_BASE}/quote"
+JUPITER_SWAP  = f"{_JUPITER_BASE}/swap"
 
 # Token registry: symbol → (mint_address, decimals)
 TOKENS = {
