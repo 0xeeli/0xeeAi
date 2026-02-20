@@ -51,7 +51,7 @@ def serve():
     except KeyboardInterrupt:
         print("\n[\033[96mSYSTÈME\033[0m] Extinction du serveur.")
 
-def deploy():
+def deploy(force: bool = False):
     if IS_VPS:
         print("[\033[91mERREUR\033[0m] Opération interdite. Tu es déjà sur le VPS. Le déploiement se fait depuis la machine locale.")
         return
@@ -97,10 +97,13 @@ def deploy():
         print(f"{color}{label}\033[0m")
 
     print(f"\n  {len(lines)} file(s) to sync.")
-    confirm = input(f"\n[\033[93mWARNING\033[0m] Deploy to {VPS_IP} with --delete? (y/N) : ").strip().lower()
-    if confirm != "y":
-        print("[\033[96mCANCELLED\033[0m] Deploy aborted.")
-        return
+    if force:
+        print(f"[\033[93mWARNING\033[0m] --claude: skipping confirmation, deploying to {VPS_IP}.")
+    else:
+        confirm = input(f"\n[\033[93mWARNING\033[0m] Deploy to {VPS_IP} with --delete? (y/N) : ").strip().lower()
+        if confirm != "y":
+            print("[\033[96mCANCELLED\033[0m] Deploy aborted.")
+            return
 
     print(f"\n[\033[95mBRIDGE\033[0m] Uplink to {VPS_IP}...")
     try:
@@ -440,7 +443,7 @@ if __name__ == "__main__":
     if cmd == "serve":
         serve()
     elif cmd == "deploy":
-        deploy()
+        deploy(force="--claude" in sys.argv)
     elif cmd == "backup":
         backup()
     elif cmd == "status":
