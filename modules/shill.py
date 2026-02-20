@@ -7,7 +7,7 @@ Shill-as-a-Service: listens for incoming SOL transfers with a Twitter
 Phase 1: SOL transfers only.
 # TODO: accept $0xEE token transfers + increase SHILL_MIN_AMOUNT
 
-Storage : ~/.local/share/0xeeAI/shill_state.json
+Storage : logs/shill_state.json (project-relative, included in nexus backup)
 Env vars: SHILL_MIN_SOL (default: 0.001), SOLANA_WALLET, SOLANA_RPC
 """
 
@@ -22,7 +22,7 @@ logger = logging.getLogger("0xeeTerm.shill")
 
 LAMPORTS_PER_SOL = 1_000_000_000
 
-SHILL_STATE_DIR  = Path.home() / ".local" / "share" / "0xeeAI"
+SHILL_STATE_DIR  = Path(__file__).parent.parent / "logs"
 SHILL_STATE_FILE = SHILL_STATE_DIR / "shill_state.json"
 
 

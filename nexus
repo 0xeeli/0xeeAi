@@ -28,7 +28,7 @@ IS_VPS = (CURRENT_USER == VPS_USER)
 # --- CHEMINS SYSTÈMES ---
 INFRA_DIR    = Path(__file__).parent / "infra"
 SYSTEMD_DIR  = Path("/etc/systemd/system")
-MANIFEST_DIR = Path.home() / ".local" / "share" / "0xeeAI"
+MANIFEST_DIR = Path(__file__).parent / "logs"
 MANIFEST_FILE = MANIFEST_DIR / "installed_files.json"
 
 def print_banner():

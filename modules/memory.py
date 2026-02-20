@@ -4,7 +4,7 @@
 Passive collection of posted tweets and their X metrics.
 Phase 1: record-only. Phase 3: will feed into brain.py to influence content.
 
-Storage: ~/.local/share/0xeeAI/memory.json
+Storage: logs/memory.json (project-relative, included in nexus backup)
 Format : { tweet_id: { id, text, type, posted_at, likes, retweets,
                         replies, impressions, score, fetched_at } }
 """
@@ -21,7 +21,7 @@ logger = logging.getLogger("0xeeTerm.memory")
 #  CONFIG
 # ─────────────────────────────────────────────
 
-MEMORY_DIR  = Path.home() / ".local" / "share" / "0xeeAI"
+MEMORY_DIR  = Path(__file__).parent.parent / "logs"
 MEMORY_FILE = MEMORY_DIR / "memory.json"
 
 FETCH_INTERVAL_HOURS = 4
