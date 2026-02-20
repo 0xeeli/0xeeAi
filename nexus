@@ -92,7 +92,7 @@ def deploy(force: bool = False):
 
     print(f"[\033[95mBRIDGE\033[0m] Dry-run — scanning changes against {VPS_IP}...\n")
     code_lines = _scan_changes(LOCAL_DIR,     code_dst, code_excl, ssh_opt)
-    web_lines  = _scan_changes(LOCAL_WEB_DIR, web_dst,  [],        ssh_opt)
+    web_lines  = _scan_changes(LOCAL_WEB_DIR, web_dst,  ["--exclude=public.json"], ssh_opt)
 
     if not code_lines and not web_lines:
         print("[\033[92mNO CHANGES\033[0m] Remote is already up to date.")
@@ -121,7 +121,8 @@ def deploy(force: bool = False):
             )
         if web_lines:
             subprocess.run(
-                ["rsync", "-avz", "--delete"] + ssh_opt + [LOCAL_WEB_DIR, web_dst],
+                ["rsync", "-avz", "--delete", "--exclude=public.json"]
+                + ssh_opt + [LOCAL_WEB_DIR, web_dst],
                 check=True
             )
         print(f"\n[\033[92mSUCCESS\033[0m] Code and web synced to remote.")

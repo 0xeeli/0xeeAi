@@ -79,17 +79,31 @@ def save_state(state: dict):
 
 def save_public_data(state: dict, status: dict, portfolio: dict = None):
     """Export live data for ai.0xee.li frontend."""
-    public_file = Path(__file__).parent / "logs" / "public.json"
     public_data = {
-        "updated_at":   datetime.now(timezone.utc).isoformat(),
-        "finance":      status,
-        "portfolio":    portfolio,
+        "updated_at":    datetime.now(timezone.utc).isoformat(),
+        "finance":       status,
+        "portfolio":     portfolio,
         "recent_tweets": state.get("tweet_history", []),
         "tweets_posted": state.get("tweets_posted", 0),
     }
+    # Always write to logs/
+    public_file = Path(__file__).parent / "logs" / "public.json"
     with open(public_file, "w") as f:
         json.dump(public_data, f, indent=2)
-    logger.info("public.json updated.")
+
+    # Also write to web root if REMOTE_WEB_DIR is set
+    web_dir = os.getenv("REMOTE_WEB_DIR", "")
+    if web_dir:
+        web_file = Path(web_dir) / "public.json"
+        try:
+            web_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(web_file, "w") as f:
+                json.dump(public_data, f, indent=2)
+            logger.info(f"public.json → {web_file}")
+        except Exception as e:
+            logger.warning(f"Could not write public.json to web root: {e}")
+    else:
+        logger.info("public.json updated (logs/ only — REMOTE_WEB_DIR not set).")
 
 
 def should_post_heartbeat(state: dict, interval_hours: int = 2) -> bool:
