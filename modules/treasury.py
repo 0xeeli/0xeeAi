@@ -38,6 +38,9 @@ TOKENS = {
     "usdc":    (USDC_MINT,    6),
 }
 
+# Reverse lookup: mint_address → decimals
+MINT_DECIMALS = {mint: dec for _, (mint, dec) in TOKENS.items()}
+
 
 # ─────────────────────────────────────────────
 #  SECURITY & CONFIG
@@ -193,8 +196,10 @@ def swap(
             logger.error(f"Treasury: Jupiter quote error: {quote['error']}")
             return None
 
-        in_ui  = int(quote["inAmount"])  / LAMPORTS_PER_SOL
-        out_ui = int(quote["outAmount"]) / LAMPORTS_PER_SOL
+        in_dec  = MINT_DECIMALS.get(input_mint,  9)
+        out_dec = MINT_DECIMALS.get(output_mint, 9)
+        in_ui   = int(quote["inAmount"])  / (10 ** in_dec)
+        out_ui  = int(quote["outAmount"]) / (10 ** out_dec)
         logger.info(
             f"Treasury: swap quote — {in_ui:.6f} {input_mint[:8]}..."
             f" → {out_ui:.6f} {output_mint[:8]}..."
