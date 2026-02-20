@@ -51,6 +51,7 @@ from modules.brain import (
     generate_existential_tweet,
 )
 from modules.mentions import process_mentions
+from modules.shill import process_shills
 from modules.memory import save_tweet as memory_save, update_all_metrics, get_top_performers
 
 # State file to track last actions
@@ -218,6 +219,12 @@ def run_daemon(interval_minutes: int = 30):
         time.sleep(interval_minutes * 60)
 
 
+def run_shill():
+    """Scan on-chain transactions for paid shill requests and post mention tweets."""
+    logger.info("Running shill cycle...")
+    process_shills()
+
+
 def run_memory():
     """Refresh tweet metrics and display top performers."""
     update_all_metrics()
@@ -247,7 +254,7 @@ def main():
     )
     parser.add_argument(
         "command",
-        choices=["heartbeat", "status", "daemon", "launch", "mentions", "memory"],
+        choices=["heartbeat", "status", "daemon", "launch", "mentions", "memory", "shill"],
         help="Command to run",
     )
     parser.add_argument(
@@ -274,6 +281,8 @@ def main():
         run_mentions()
     elif args.command == "memory":
         run_memory()
+    elif args.command == "shill":
+        run_shill()
 
 
 if __name__ == "__main__":

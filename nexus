@@ -303,6 +303,17 @@ def uninstall():
     print(f"\n[\033[92mDONE\033[0m] All units removed. Manifest cleaned.")
 
 
+def shill_cmd():
+    """Trigger 0xeeTerm shill cycle on the VPS (or locally)."""
+    remote_cmd = f"cd {REMOTE_DIR.rstrip('/')} && venv/bin/python3 0xeeTerm shill"
+    if IS_VPS:
+        print("[\033[93mVPS\033[0m] Running shill cycle locally...\n")
+        subprocess.run(remote_cmd, shell=True)
+    else:
+        print(f"[\033[95mBRIDGE\033[0m] Running shill cycle on {VPS_IP}...\n")
+        subprocess.run(["ssh", "-p", VPS_PORT, f"{VPS_USER}@{VPS_IP}", remote_cmd])
+
+
 def memory_cmd():
     """Trigger 0xeeTerm memory metrics refresh on the VPS (or locally)."""
     remote_cmd = f"cd {REMOTE_DIR.rstrip('/')} && venv/bin/python3 0xeeTerm memory"
@@ -377,6 +388,7 @@ def show_help():
         print("  trigger heartbeat  : Trigger a heartbeat run on VPS via SSH")
         print("  trigger mentions   : Trigger a mentions run on VPS via SSH")
         print("  memory             : Refresh tweet metrics and show top performers")
+        print("  shill              : Scan on-chain txs for paid shill requests")
         print()
         print("\033[95m[ SYSTEMD (run on VPS) ]\033[0m")
         print("  install            : Copy infra/ units to systemd and enable timers")
@@ -420,6 +432,8 @@ if __name__ == "__main__":
         ssh()
     elif cmd == "memory":
         memory_cmd()
+    elif cmd == "shill":
+        shill_cmd()
     elif cmd == "install":
         install(show_status="--status" in sys.argv)
     elif cmd == "uninstall":
