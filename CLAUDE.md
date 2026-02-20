@@ -109,6 +109,7 @@ RUNWAY_DAYS=60
 SHILL_MIN_SOL=0.005
 
 # Infrastructure (nexus)
+# NEXUS_ENV=/path/to/.env   # override — lookup order: $NEXUS_ENV → ~/.config/0xeeAI/.env → project dir
 VPS_USER=debian
 VPS_IP=<ip>
 VPS_PORT=22
