@@ -24,10 +24,18 @@ LAMPORTS_PER_SOL = 1_000_000_000
 
 SOL_MINT     = "So11111111111111111111111111111111111111112"
 JITOSOL_MINT = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
+USDC_MINT    = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 MEMO_PROGRAM = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
 
 JUPITER_QUOTE = "https://quote-api.jup.ag/v6/quote"
 JUPITER_SWAP  = "https://quote-api.jup.ag/v6/swap"
+
+# Token registry: symbol → (mint_address, decimals)
+TOKENS = {
+    "sol":     (SOL_MINT,     9),
+    "jitosol": (JITOSOL_MINT, 9),
+    "usdc":    (USDC_MINT,    6),
+}
 
 
 # ─────────────────────────────────────────────
@@ -329,6 +337,38 @@ def pay_bill(recipient_address: str, amount_sol: float, memo: str) -> str | None
 
 # ─────────────────────────────────────────────
 #  5. AUTO TREASURY (master function)
+# ─────────────────────────────────────────────
+#  MANUAL SWAP (CLI / debug)
+# ─────────────────────────────────────────────
+
+def manual_swap(from_symbol: str, to_symbol: str, amount_ui: float) -> str | None:
+    """
+    Swap tokens by friendly symbol and human-readable amount.
+    from_symbol / to_symbol: 'sol', 'usdc', 'jitosol'
+    amount_ui: amount of the FROM token (e.g. 0.5 for 0.5 USDC)
+    """
+    from_symbol = from_symbol.lower()
+    to_symbol   = to_symbol.lower()
+
+    if from_symbol not in TOKENS:
+        logger.error(f"Treasury: unknown token '{from_symbol}'. Choose: {', '.join(TOKENS)}")
+        return None
+    if to_symbol not in TOKENS:
+        logger.error(f"Treasury: unknown token '{to_symbol}'. Choose: {', '.join(TOKENS)}")
+        return None
+
+    from_mint, from_dec = TOKENS[from_symbol]
+    to_mint,   _        = TOKENS[to_symbol]
+
+    amount_raw = int(amount_ui * (10 ** from_dec))
+
+    logger.info(
+        f"Treasury: manual_swap — {amount_ui} {from_symbol.upper()} → {to_symbol.upper()} "
+        f"({'DRY_RUN' if _is_dry_run() else 'LIVE'})"
+    )
+    return swap(from_mint, to_mint, amount_raw)
+
+
 # ─────────────────────────────────────────────
 
 def _get_due_bills() -> list:

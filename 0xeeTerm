@@ -52,7 +52,7 @@ from modules.brain import (
 from modules.mentions import process_mentions
 from modules.shill import process_shills
 from modules.memory import save_tweet as memory_save, update_all_metrics, get_top_performers
-from modules.treasury import auto_treasury, get_portfolio
+from modules.treasury import auto_treasury, get_portfolio, manual_swap
 
 # State file to track last actions
 STATE_FILE = Path(__file__).parent / "logs" / "state.json"
@@ -222,6 +222,16 @@ def run_daemon(interval_minutes: int = 30):
         time.sleep(interval_minutes * 60)
 
 
+def run_swap(from_token: str, to_token: str, amount: float):
+    """Manual swap via Jupiter. Dry-run by default (set DRY_RUN=false to execute)."""
+    logger.info(f"Manual swap: {amount} {from_token.upper()} → {to_token.upper()}")
+    sig = manual_swap(from_token, to_token, amount)
+    if sig:
+        logger.info(f"Swap executed — sig: {sig}")
+    else:
+        logger.info("Swap not executed (DRY_RUN=true or error — check logs above).")
+
+
 def run_treasury():
     """Run the autonomous treasury cycle (portfolio, staking, bills)."""
     logger.info("Running treasury cycle...")
@@ -316,6 +326,8 @@ def _help_full():
     print()
     print("  TREASURY")
     print("    treasury           Run autonomous treasury cycle (portfolio, stake, bills)")
+    print("    swap <from> <to> <amount>")
+    print("                       Manual swap via Jupiter (tokens: sol, usdc, jitosol)")
     print()
     print("  OPTIONS")
     print("    -h, --help         Show this help message")
@@ -365,6 +377,16 @@ def main():
         run_announce()
     elif command == "treasury":
         run_treasury()
+    elif command == "swap":
+        if len(argv) < 4:
+            print("  [ERROR] Usage: swap <from> <to> <amount>  (e.g. swap usdc sol 0.5)")
+            sys.exit(1)
+        try:
+            amount = float(argv[3])
+        except ValueError:
+            print(f"  [ERROR] Invalid amount: '{argv[3]}'")
+            sys.exit(1)
+        run_swap(argv[1], argv[2], amount)
     else:
         print(f"\n  [ERROR] Unknown command: '{command}'")
         _help_short()
