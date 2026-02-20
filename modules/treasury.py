@@ -38,8 +38,9 @@ TOKENS = {
     "usdc":    (USDC_MINT,    6),
 }
 
-# Reverse lookup: mint_address → decimals
+# Reverse lookups: mint_address → decimals / symbol
 MINT_DECIMALS = {mint: dec for _, (mint, dec) in TOKENS.items()}
+MINT_SYMBOLS  = {mint: sym.upper() for sym, (mint, _) in TOKENS.items()}
 
 
 # ─────────────────────────────────────────────
@@ -169,43 +170,60 @@ def get_portfolio() -> dict:
 #  2. GENERIC SWAP (Jupiter V6)
 # ─────────────────────────────────────────────
 
+def get_quote(
+    input_mint: str,
+    output_mint: str,
+    amount_raw: int,
+    slippage_bps: int = 50,
+) -> dict | None:
+    """Fetch a Jupiter quote without executing. Returns raw quote dict or None."""
+    try:
+        resp = requests.get(JUPITER_QUOTE, params={
+            "inputMint":   input_mint,
+            "outputMint":  output_mint,
+            "amount":      amount_raw,
+            "slippageBps": slippage_bps,
+        }, timeout=10)
+        quote = resp.json()
+        if "error" in quote:
+            logger.error(f"Treasury: Jupiter quote error: {quote['error']}")
+            return None
+        return quote
+    except Exception as e:
+        logger.error(f"Treasury: get_quote failed: {e}")
+        return None
+
+
 def swap(
     input_mint: str,
     output_mint: str,
     amount_lamports: int,
     slippage_bps: int = 50,
+    force_execute: bool = False,
 ) -> str | None:
     """
     Execute a generic swap via Jupiter V6.
     amount_lamports: amount in lamports (or token smallest unit).
+    force_execute: bypass DRY_RUN check (used by --now confirmation flow).
     Returns transaction signature, or None on failure / dry-run.
     """
     wallet = os.getenv("SOLANA_WALLET", "")
     rpc    = os.getenv("SOLANA_RPC", "https://api.mainnet-beta.solana.com")
 
     try:
-        # — Quote —
-        quote_resp = requests.get(JUPITER_QUOTE, params={
-            "inputMint":   input_mint,
-            "outputMint":  output_mint,
-            "amount":      amount_lamports,
-            "slippageBps": slippage_bps,
-        }, timeout=10)
-        quote = quote_resp.json()
-        if "error" in quote:
-            logger.error(f"Treasury: Jupiter quote error: {quote['error']}")
+        quote = get_quote(input_mint, output_mint, amount_lamports, slippage_bps)
+        if not quote:
             return None
 
-        in_dec  = MINT_DECIMALS.get(input_mint,  9)
-        out_dec = MINT_DECIMALS.get(output_mint, 9)
-        in_ui   = int(quote["inAmount"])  / (10 ** in_dec)
-        out_ui  = int(quote["outAmount"]) / (10 ** out_dec)
-        logger.info(
-            f"Treasury: swap quote — {in_ui:.6f} {input_mint[:8]}..."
-            f" → {out_ui:.6f} {output_mint[:8]}..."
-        )
+        in_dec   = MINT_DECIMALS.get(input_mint,  9)
+        out_dec  = MINT_DECIMALS.get(output_mint, 9)
+        in_ui    = int(quote["inAmount"])  / (10 ** in_dec)
+        out_ui   = int(quote["outAmount"]) / (10 ** out_dec)
+        in_sym   = MINT_SYMBOLS.get(input_mint,  input_mint[:8])
+        out_sym  = MINT_SYMBOLS.get(output_mint, output_mint[:8])
+        logger.info(f"Treasury: swap quote — {in_ui:.6f} {in_sym} → {out_ui:.6f} {out_sym}")
 
-        if _is_dry_run():
+        if _is_dry_run() and not force_execute:
             logger.info("Treasury: DRY_RUN=true — swap not executed.")
             return None
 
@@ -347,11 +365,12 @@ def pay_bill(recipient_address: str, amount_sol: float, memo: str) -> str | None
 #  MANUAL SWAP (CLI / debug)
 # ─────────────────────────────────────────────
 
-def manual_swap(from_symbol: str, to_symbol: str, amount_ui: float) -> str | None:
+def manual_swap(from_symbol: str, to_symbol: str, amount_ui: float, force_execute: bool = False) -> str | None:
     """
     Swap tokens by friendly symbol and human-readable amount.
     from_symbol / to_symbol: 'sol', 'usdc', 'jitosol'
     amount_ui: amount of the FROM token (e.g. 0.5 for 0.5 USDC)
+    force_execute: bypass DRY_RUN (used by --now confirmation flow)
     """
     from_symbol = from_symbol.lower()
     to_symbol   = to_symbol.lower()
@@ -370,9 +389,9 @@ def manual_swap(from_symbol: str, to_symbol: str, amount_ui: float) -> str | Non
 
     logger.info(
         f"Treasury: manual_swap — {amount_ui} {from_symbol.upper()} → {to_symbol.upper()} "
-        f"({'DRY_RUN' if _is_dry_run() else 'LIVE'})"
+        f"({'LIVE' if force_execute or not _is_dry_run() else 'DRY_RUN'})"
     )
-    return swap(from_mint, to_mint, amount_raw)
+    return swap(from_mint, to_mint, amount_raw, force_execute=force_execute)
 
 
 # ─────────────────────────────────────────────

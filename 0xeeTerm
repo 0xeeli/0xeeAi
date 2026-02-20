@@ -52,7 +52,7 @@ from modules.brain import (
 from modules.mentions import process_mentions
 from modules.shill import process_shills
 from modules.memory import save_tweet as memory_save, update_all_metrics, get_top_performers
-from modules.treasury import auto_treasury, get_portfolio, manual_swap
+from modules.treasury import auto_treasury, get_portfolio, manual_swap, get_quote, TOKENS, MINT_DECIMALS, MINT_SYMBOLS
 
 # State file to track last actions
 STATE_FILE = Path(__file__).parent / "logs" / "state.json"
@@ -222,14 +222,55 @@ def run_daemon(interval_minutes: int = 30):
         time.sleep(interval_minutes * 60)
 
 
-def run_swap(from_token: str, to_token: str, amount: float):
-    """Manual swap via Jupiter. Dry-run by default (set DRY_RUN=false to execute)."""
-    logger.info(f"Manual swap: {amount} {from_token.upper()} → {to_token.upper()}")
-    sig = manual_swap(from_token, to_token, amount)
+def run_swap(from_token: str, to_token: str, amount: float, execute: bool = False):
+    """
+    Show a Jupiter quote for the swap.
+    With execute=True (--now): prompt for confirmation, then execute live.
+    """
+    from_token = from_token.lower()
+    to_token   = to_token.lower()
+
+    if from_token not in TOKENS or to_token not in TOKENS:
+        valid = ", ".join(TOKENS)
+        print(f"\n  [ERROR] Unknown token. Valid: {valid}")
+        return
+
+    from_mint, from_dec = TOKENS[from_token]
+    to_mint,   to_dec   = TOKENS[to_token]
+    amount_raw = int(amount * (10 ** from_dec))
+
+    quote = get_quote(from_mint, to_mint, amount_raw)
+    if not quote:
+        print("  [ERROR] Could not fetch quote — check logs.")
+        return
+
+    in_ui  = int(quote["inAmount"])  / (10 ** from_dec)
+    out_ui = int(quote["outAmount"]) / (10 ** to_dec)
+    rate   = out_ui / in_ui if in_ui else 0
+
+    print(f"\n  ─────────────────────────────────────")
+    print(f"  Jupiter Quote")
+    print(f"  ─────────────────────────────────────")
+    print(f"  {in_ui:.6f} {from_token.upper()}  →  {out_ui:.6f} {to_token.upper()}")
+    print(f"  Rate : 1 {from_token.upper()} = {rate:.6f} {to_token.upper()}")
+    print(f"  ─────────────────────────────────────\n")
+
+    if not execute:
+        print("  Pass --now to execute this swap.")
+        return
+
+    confirm = input(f"  Execute? (y/N) ").strip().lower()
+    if confirm != "y":
+        print("  Swap cancelled.")
+        return
+
+    logger.info(f"Executing swap: {amount} {from_token.upper()} → {to_token.upper()}")
+    sig = manual_swap(from_token, to_token, amount, force_execute=True)
     if sig:
+        print(f"\n  Swap confirmed — sig: {sig}")
         logger.info(f"Swap executed — sig: {sig}")
     else:
-        logger.info("Swap not executed (DRY_RUN=true or error — check logs above).")
+        print("  Swap failed — check logs.")
 
 
 def run_treasury():
@@ -379,14 +420,14 @@ def main():
         run_treasury()
     elif command == "swap":
         if len(argv) < 4:
-            print("  [ERROR] Usage: swap <from> <to> <amount>  (e.g. swap usdc sol 0.5)")
+            print("  [ERROR] Usage: swap <from> <to> <amount> [--now]  (e.g. swap sol usdc 0.004)")
             sys.exit(1)
         try:
             amount = float(argv[3])
         except ValueError:
             print(f"  [ERROR] Invalid amount: '{argv[3]}'")
             sys.exit(1)
-        run_swap(argv[1], argv[2], amount)
+        run_swap(argv[1], argv[2], amount, execute="--now" in argv)
     else:
         print(f"\n  [ERROR] Unknown command: '{command}'")
         _help_short()
