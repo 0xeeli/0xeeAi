@@ -116,4 +116,87 @@ async function syncWithMatrix() {
 document.addEventListener('DOMContentLoaded', () => {
     syncWithMatrix();
     setInterval(syncWithMatrix, 60000);
+
+    const tollBtn = document.getElementById('pay-toll-btn');
+    if (tollBtn) tollBtn.addEventListener('click', payNexusToll);
 });
+
+// ==========================================
+// NEXUS TOLL — Web3 DApp payment
+// ==========================================
+const TREASURY_WALLET = "4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr";
+const MEMO_PROGRAM_ID  = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLzncY";
+const TOLL_LAMPORTS    = 5_000_000; // 0.005 SOL
+const SOLANA_RPC       = "https://api.mainnet-beta.solana.com";
+
+async function payNexusToll() {
+    const btn      = document.getElementById('pay-toll-btn');
+    const statusEl = document.getElementById('toll-status');
+    const handle   = document.getElementById('x-handle').value.trim();
+
+    function setStatus(msg, color = 'var(--text-muted)') {
+        statusEl.style.color = color;
+        statusEl.textContent = msg;
+    }
+
+    if (!handle) {
+        setStatus('Enter your X handle first.', '#ff3333');
+        return;
+    }
+
+    if (!window.solana || !window.solana.isPhantom) {
+        setStatus('Phantom not detected — install it at phantom.app', '#ff3333');
+        return;
+    }
+
+    btn.disabled = true;
+    setStatus('Connecting wallet...', 'var(--text-muted)');
+
+    try {
+        await window.solana.connect();
+        const sender = window.solana.publicKey;
+
+        setStatus('Fetching blockhash...', 'var(--text-muted)');
+        const connection = new solanaWeb3.Connection(SOLANA_RPC, 'confirmed');
+        const { blockhash } = await connection.getLatestBlockhash();
+
+        // Transfer: 0.005 SOL → treasury
+        const transferIx = solanaWeb3.SystemProgram.transfer({
+            fromPubkey: sender,
+            toPubkey:   new solanaWeb3.PublicKey(TREASURY_WALLET),
+            lamports:   TOLL_LAMPORTS,
+        });
+
+        // Memo: X handle encoded as UTF-8 (browser-safe, no Buffer needed)
+        const memoIx = new solanaWeb3.TransactionInstruction({
+            programId: new solanaWeb3.PublicKey(MEMO_PROGRAM_ID),
+            keys:      [],
+            data:      new TextEncoder().encode(handle),
+        });
+
+        const tx = new solanaWeb3.Transaction();
+        tx.recentBlockhash = blockhash;
+        tx.feePayer = sender;
+        tx.add(transferIx, memoIx);
+
+        setStatus('Waiting for Phantom approval...', 'var(--solana-purple)');
+        const { signature } = await window.solana.signAndSendTransaction(tx);
+
+        const short = signature.slice(0, 8) + '...';
+        setStatus(`Toll received. Tx: ${short}`, 'var(--solana-green)');
+        console.log(`[0xeeAI] Nexus Toll paid — sig: ${signature}`);
+
+    } catch (err) {
+        if (err.code === 4001 || err.message?.includes('User rejected')) {
+            setStatus('Transaction cancelled.', 'var(--text-muted)');
+        } else if (err.message?.toLowerCase().includes('insufficient')) {
+            setStatus('Insufficient SOL balance.', '#ff3333');
+        } else {
+            const msg = err.message?.slice(0, 60) || 'Unknown error';
+            setStatus(`Error: ${msg}`, '#ff3333');
+            console.error('[0xeeAI] Toll error:', err);
+        }
+    } finally {
+        btn.disabled = false;
+    }
+}

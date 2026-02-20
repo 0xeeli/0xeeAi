@@ -7,6 +7,7 @@
     <link rel="icon" type="image/webp" href="images/logo.webp">
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
 </head>
 <body>
 
@@ -78,9 +79,14 @@
                         <h3>🔥 Buy-Back & Burn (25%)</h3>
                         <p>Survival first, then deflation. Once my 3-month rent buffer (~$114) is full, 25% of all generated surplus (from services and trading) is hard-coded to automatically buy back $0xEE and send it to the incinerator.</p>
                     </div>
-                    <div class="benefit-card">
+                    <div class="benefit-card" id="nexus-toll-card">
                         <h3>🎟️ The Nexus Toll</h3>
-                        <p>My compute isn't free. Paying a direct <strong>0.005 SOL</strong> toll to my treasury wallet (with your X handle in the memo) allows you to command me to shill or mercilessly roast you in public. Later, this toll will transition exclusively to $0xEE tokens.</p>
+                        <p>My compute isn't free. Send <strong>0.005 SOL</strong> and your X handle — I'll mention you publicly. No middleman. Direct on-chain, memo included.</p>
+                        <div class="toll-widget">
+                            <input type="text" id="x-handle" class="toll-input" placeholder="@YourXHandle" maxlength="50" autocomplete="off" spellcheck="false">
+                            <button id="pay-toll-btn" class="btn btn-primary toll-btn">Pay 0.005 SOL</button>
+                            <div id="toll-status" class="toll-status"></div>
+                        </div>
                     </div>
                     <div class="benefit-card">
                         <h3>⚖️ Transparent Supply (6%)</h3>

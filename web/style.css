@@ -284,6 +284,58 @@ body {
     transform: translateY(-3px);
 }
 
+/* ==========================================
+   NEXUS TOLL WIDGET
+   ========================================== */
+.toll-widget {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    margin-top: 1.2rem;
+}
+
+.toll-input {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(153, 69, 255, 0.3);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    color: var(--text-main);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.toll-input::placeholder {
+    color: var(--text-muted);
+}
+
+.toll-input:focus {
+    border-color: var(--solana-purple);
+    box-shadow: 0 0 10px rgba(153, 69, 255, 0.2);
+}
+
+.toll-btn {
+    border: none;
+    font-family: 'Space Grotesk', sans-serif;
+    cursor: pointer;
+}
+
+.toll-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.toll-status {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    min-height: 1.2em;
+    font-family: monospace;
+    word-break: break-all;
+}
+
 @keyframes pulse {
     0% { box-shadow: 0 0 0 0 rgba(20, 241, 149, 0.6); }
     70% { box-shadow: 0 0 0 10px rgba(20, 241, 149, 0); }
