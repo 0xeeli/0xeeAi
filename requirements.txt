@@ -3,3 +3,7 @@ tweepy>=4.14.0
 requests>=2.31.0
 python-dotenv>=1.0.0
 anthropic>=0.25.0
+
+# Solana — treasury and on-chain operations
+solana>=0.30.0
+solders>=0.18.0
