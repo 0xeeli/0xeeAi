@@ -326,6 +326,17 @@ def memory_cmd():
         subprocess.run(["ssh", "-p", VPS_PORT, f"{VPS_USER}@{VPS_IP}", remote_cmd])
 
 
+def treasury_cmd():
+    """Run autonomous treasury cycle on the VPS (portfolio snapshot, stake, bills)."""
+    remote_cmd = f"cd {REMOTE_DIR.rstrip('/')} && venv/bin/python3 0xeeTerm treasury"
+    if IS_VPS:
+        print("[\033[93mVPS\033[0m] Running treasury cycle locally...\n")
+        subprocess.run(remote_cmd, shell=True)
+    else:
+        print(f"[\033[95mBRIDGE\033[0m] Running treasury cycle on {VPS_IP}...\n")
+        subprocess.run(["ssh", "-p", VPS_PORT, f"{VPS_USER}@{VPS_IP}", remote_cmd])
+
+
 def sys_status():
     if IS_VPS:
         print("[\033[93mVPS\033[0m] Lecture directe des senseurs systemd...\n")
@@ -390,6 +401,7 @@ def show_help():
         print("  trigger mentions   : Trigger a mentions run on VPS via SSH")
         print("  memory             : Refresh tweet metrics and show top performers")
         print("  shill              : Scan on-chain txs for paid shill requests")
+        print("  treasury           : Run autonomous treasury cycle (portfolio, stake, bills)")
         print()
         print("\033[95m[ SYSTEMD (run on VPS) ]\033[0m")
         print("  install            : Copy infra/ units to systemd and enable timers")
@@ -435,6 +447,8 @@ if __name__ == "__main__":
         memory_cmd()
     elif cmd == "shill":
         shill_cmd()
+    elif cmd == "treasury":
+        treasury_cmd()
     elif cmd == "install":
         install(show_status="--status" in sys.argv)
     elif cmd == "uninstall":

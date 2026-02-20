@@ -52,6 +52,7 @@ from modules.brain import (
 from modules.mentions import process_mentions
 from modules.shill import process_shills
 from modules.memory import save_tweet as memory_save, update_all_metrics, get_top_performers
+from modules.treasury import auto_treasury, get_portfolio
 
 # State file to track last actions
 STATE_FILE = Path(__file__).parent / "logs" / "state.json"
@@ -76,12 +77,13 @@ def save_state(state: dict):
         json.dump(state, f, indent=2)
 
 
-def save_public_data(state: dict, status: dict):
+def save_public_data(state: dict, status: dict, portfolio: dict = None):
     """Export live data for ai.0xee.li frontend."""
     public_file = Path(__file__).parent / "logs" / "public.json"
     public_data = {
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-        "finance": status,
+        "updated_at":   datetime.now(timezone.utc).isoformat(),
+        "finance":      status,
+        "portfolio":    portfolio,
         "recent_tweets": state.get("tweet_history", []),
         "tweets_posted": state.get("tweets_posted", 0),
     }
@@ -220,6 +222,15 @@ def run_daemon(interval_minutes: int = 30):
         time.sleep(interval_minutes * 60)
 
 
+def run_treasury():
+    """Run the autonomous treasury cycle (portfolio, staking, bills)."""
+    logger.info("Running treasury cycle...")
+    portfolio = auto_treasury()
+    state  = load_state()
+    status = get_survival_status()
+    save_public_data(state, status, portfolio)
+
+
 def run_shill():
     """Scan on-chain transactions for paid shill requests and post mention tweets."""
     logger.info("Running shill cycle...")
@@ -303,6 +314,9 @@ def _help_full():
     print("  MEMORY")
     print("    memory             Refresh tweet metrics · display top 5 performers")
     print()
+    print("  TREASURY")
+    print("    treasury           Run autonomous treasury cycle (portfolio, stake, bills)")
+    print()
     print("  OPTIONS")
     print("    -h, --help         Show this help message")
     print("    --interval N       Daemon check interval in minutes (default: 30)")
@@ -349,6 +363,8 @@ def main():
         run_shill()
     elif command == "announce":
         run_announce()
+    elif command == "treasury":
+        run_treasury()
     else:
         print(f"\n  [ERROR] Unknown command: '{command}'")
         _help_short()
