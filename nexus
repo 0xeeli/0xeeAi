@@ -404,7 +404,7 @@ def sys_status():
         "echo '';"
         # RAM
         "echo '\033[96m[--- MÉMOIRE RAM ---]\033[0m';"
-        "free -h | awk 'NR==1{printf \"  %-12s %8s %8s %8s\\n\",$1,$2,$3,$4} NR==2{printf \"  %-12s %8s %8s %8s\\n\",$1,$2,$3,$4}';"
+        "free -h | awk '/^Mem:/{printf \"  Total: %s  |  Utilisé: %s  |  Libre: %s\\n\",$2,$3,$4}';"
         "echo '';"
         # Disk — project dir
         f"echo '\033[96m[--- DISQUE PROJET ({remote_dir}) ---]\033[0m';"
