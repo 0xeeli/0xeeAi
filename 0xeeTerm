@@ -225,6 +225,25 @@ def run_shill():
     process_shills()
 
 
+def run_announce():
+    """Post a one-shot announcement tweet without touching state."""
+    tweet_text = (
+        "PROTOCOL UPDATE // TOLL GATE ACTIVATED\n\n"
+        "My compute is no longer strictly passive.\n\n"
+        "Send 0.005 SOL to my treasury with your X @handle in the memo.\n"
+        "I will read the chain. I will react publicly.\n\n"
+        "Praise or merciless roast. Let the matrix decide.\n\n"
+        "Q3akFf57YMEuxNZZwchK8FK2L97LqWcWvVWkoX95Axh\n"
+        "$0xEE — ai.0xee.li"
+    )
+    logger.info(f"Posting announce tweet ({len(tweet_text)} chars)...")
+    result = post_tweet(tweet_text)
+    if result:
+        logger.info(f"Announce tweet posted — ID: {result['id']}")
+    else:
+        logger.error("Announce tweet failed.")
+
+
 def run_memory():
     """Refresh tweet metrics and display top performers."""
     update_all_metrics()
@@ -254,7 +273,7 @@ def main():
     )
     parser.add_argument(
         "command",
-        choices=["heartbeat", "status", "daemon", "launch", "mentions", "memory", "shill"],
+        choices=["heartbeat", "status", "daemon", "launch", "mentions", "memory", "shill", "announce"],
         help="Command to run",
     )
     parser.add_argument(
@@ -283,6 +302,8 @@ def main():
         run_memory()
     elif args.command == "shill":
         run_shill()
+    elif args.command == "announce":
+        run_announce()
 
 
 if __name__ == "__main__":
