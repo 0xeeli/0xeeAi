@@ -202,7 +202,6 @@ async function payNexusToll() {
         // .toString() normalises both PublicKey objects and raw strings to base58
         const rawKey = connectResp?.publicKey ?? wallet.publicKey;
         const pubkeyStr = rawKey?.toString();
-        console.log('[0xeeAI] Wallet detected:', wallet, '| pubkey:', pubkeyStr);
         if (!pubkeyStr || pubkeyStr === 'null' || pubkeyStr === '[object Object]') {
             throw new Error('Wallet connected but publicKey unavailable — try disabling Zeal extension.');
         }
