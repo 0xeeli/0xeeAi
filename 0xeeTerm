@@ -48,6 +48,9 @@ from tweets.templates import (
 from modules.brain import (
     generate_heartbeat_tweet,
     generate_existential_tweet,
+    generate_service_tweet,
+    generate_portfolio_tweet,
+    generate_meta_tweet,
 )
 from modules.mentions import process_mentions
 from modules.shill import process_shills
@@ -160,19 +163,40 @@ def run_heartbeat():
     if should_post_heartbeat(state):
         tweet_history = state.get("tweet_history", [])
 
-        # 20% chance of existential tweet
-        if random.random() < 0.20:
-            tweet_text = generate_existential_tweet(tweet_history)
-            tweet_type = "existential"
-        else:
-            tweet_text = generate_heartbeat_tweet(status, tweet_history)
+        # Weighted mode selection
+        # heartbeat 30% | existential 15% | service 25% | portfolio 20% | meta 10%
+        roll = random.random()
+        if roll < 0.30:
             tweet_type = "heartbeat"
+        elif roll < 0.45:
+            tweet_type = "existential"
+        elif roll < 0.70:
+            tweet_type = "service"
+        elif roll < 0.90:
+            tweet_type = "portfolio"
+        else:
+            tweet_type = "meta"
+
+        logger.info(f"Tweet mode selected: {tweet_type}")
+        status["tweets_posted"] = state.get("tweets_posted", 0)
+
+        if tweet_type == "heartbeat":
+            tweet_text = generate_heartbeat_tweet(status, tweet_history)
+        elif tweet_type == "existential":
+            tweet_text = generate_existential_tweet(tweet_history)
+        elif tweet_type == "service":
+            tweet_text = generate_service_tweet(tweet_history)
+        elif tweet_type == "portfolio":
+            tweet_text = generate_portfolio_tweet(status, tweet_history)
+        elif tweet_type == "meta":
+            top = get_top_performers(3)
+            tweet_text = generate_meta_tweet(top, status, tweet_history)
 
         # Fallback to static templates if brain/API fails
         if not tweet_text:
-            logger.warning("Brain unavailable — falling back to templates")
-            from tweets.templates import get_heartbeat_tweet, get_existential_tweet
-            tweet_text = get_existential_tweet() if tweet_type == "existential" else get_heartbeat_tweet(status)
+            logger.warning("Brain unavailable — falling back to heartbeat template")
+            from tweets.templates import get_heartbeat_tweet
+            tweet_text = get_heartbeat_tweet(status)
 
         result = post_tweet(tweet_text)
         if result:

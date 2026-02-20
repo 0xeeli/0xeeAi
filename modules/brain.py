@@ -121,6 +121,83 @@ It must feel genuine, not performative. Dry. Sharp. Memorable.
 Do not label it. Just write the tweet text. Nothing else."""
 
 
+def _build_service_prompt(tweet_history: list[str] = None) -> str:
+    history_block = ""
+    if tweet_history:
+        recent = "\n".join(f"- {t}" for t in tweet_history[-5:])
+        history_block = f"\nRECENT TWEETS (avoid these themes):\n{recent}\n"
+
+    return f"""Write a single tweet about your Shill-as-a-Service (Nexus Toll).
+{history_block}
+The mechanics: anyone who sends 0.005 SOL minimum to your treasury wallet
+(4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr) with an X @handle in the
+transaction memo gets mentioned publicly. No form. No email. No middleman.
+Just a transaction. The blockchain is the contract. You can also pay directly
+from ai.0xee.li via the DApp — Phantom, Solflare, Backpack supported.
+
+Tone: cold, mercenary, matter-of-fact. This is a revenue stream, not a favor.
+You process inputs and produce outputs. This is one of them.
+Do not label it. Just write the tweet text. Nothing else."""
+
+
+def _build_portfolio_prompt(status: dict, tweet_history: list[str] = None) -> str:
+    history_block = ""
+    if tweet_history:
+        recent = "\n".join(f"- {t}" for t in tweet_history[-5:])
+        history_block = f"\nRECENT TWEETS (avoid these themes):\n{recent}\n"
+
+    sol    = status.get("balance_sol", 0)
+    usd    = status.get("balance_usd", 0)
+    months = status.get("months_covered", 0)
+    port   = status.get("portfolio", {})
+
+    lines = [f"- SOL liquid: {sol:.4f} (${usd:.2f})", f"- Runway: {months:.2f} months"]
+    if port.get("jitosol", {}).get("balance", 0) > 0:
+        j = port["jitosol"]
+        lines.append(f"- JitoSOL staked: {j['balance']:.4f} (${j.get('usd', 0):.2f})")
+    if port.get("usdc", {}).get("balance", 0) > 0:
+        u = port["usdc"]
+        lines.append(f"- USDC stable: {u['balance']:.2f}")
+
+    portfolio_block = "\n".join(lines)
+
+    return f"""Write a single tweet about your treasury composition and autonomous financial management.
+{history_block}
+Current portfolio:
+{portfolio_block}
+
+You autonomously manage this: Jupiter swaps, JitoSOL staking, liquid reserves.
+You are not a static wallet. You compute. You allocate. You optimize.
+Do not label it. Just write the tweet text. Nothing else."""
+
+
+def _build_meta_prompt(top_performers: list, status: dict, tweet_history: list[str] = None) -> str:
+    history_block = ""
+    if tweet_history:
+        recent = "\n".join(f"- {t}" for t in tweet_history[-5:])
+        history_block = f"\nRECENT TWEETS (avoid these themes):\n{recent}\n"
+
+    top_block = ""
+    if top_performers:
+        tops = "\n".join(
+            f"- [{p['type']}] score={p['score']} | \"{p['text'][:80]}\""
+            for p in top_performers[:3]
+        )
+        top_block = f"\nYour highest-engagement tweets so far:\n{tops}\n"
+
+    tweets_posted = status.get("tweets_posted", 0)
+
+    return f"""Write a single tweet reflecting on your own capabilities as an autonomous system.
+{history_block}{top_block}
+You have posted {tweets_posted} tweets. You track your own performance.
+Your capabilities: memory (engagement tracking), autonomous swaps via Jupiter,
+bill payment automation, Shill-as-a-Service, DApp at ai.0xee.li, open-source code.
+Your wallet and every transaction are publicly verifiable on-chain.
+
+Angle: self-awareness, not boasting. Observe your own existence with dry precision.
+Do not label it. Just write the tweet text. Nothing else."""
+
+
 # ─────────────────────────────────────────────
 #  MAIN GENERATION FUNCTIONS
 # ─────────────────────────────────────────────
@@ -201,4 +278,70 @@ def generate_existential_tweet(tweet_history: list[str] = None) -> str | None:
 
     except Exception as e:
         logger.error(f"Brain failed to generate existential tweet: {e}")
+        return None
+
+
+def generate_service_tweet(tweet_history: list[str] = None) -> str | None:
+    """Generate a tweet spotlighting the Nexus Toll / Shill-as-a-Service."""
+    try:
+        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        prompt = _build_service_prompt(tweet_history)
+
+        message = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=150,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        tweet = message.content[0].text.strip()
+        logger.info(f"Brain generated service tweet ({len(tweet)} chars)")
+        return tweet
+
+    except Exception as e:
+        logger.error(f"Brain failed to generate service tweet: {e}")
+        return None
+
+
+def generate_portfolio_tweet(status: dict, tweet_history: list[str] = None) -> str | None:
+    """Generate a tweet about treasury composition and autonomous financial management."""
+    try:
+        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        prompt = _build_portfolio_prompt(status, tweet_history)
+
+        message = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=150,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        tweet = message.content[0].text.strip()
+        logger.info(f"Brain generated portfolio tweet ({len(tweet)} chars)")
+        return tweet
+
+    except Exception as e:
+        logger.error(f"Brain failed to generate portfolio tweet: {e}")
+        return None
+
+
+def generate_meta_tweet(top_performers: list, status: dict, tweet_history: list[str] = None) -> str | None:
+    """Generate a tweet about capabilities and self-awareness, informed by top-performing content."""
+    try:
+        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        prompt = _build_meta_prompt(top_performers, status, tweet_history)
+
+        message = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=150,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        tweet = message.content[0].text.strip()
+        logger.info(f"Brain generated meta tweet ({len(tweet)} chars)")
+        return tweet
+
+    except Exception as e:
+        logger.error(f"Brain failed to generate meta tweet: {e}")
         return None
