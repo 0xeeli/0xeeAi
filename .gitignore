@@ -2,10 +2,8 @@
 .env
 venv/
 
-# AI memory and logs (Never version state)
-logs/*.log
-logs/state.json
-logs/public.json
+# Logs and runtime state (never version)
+logs/
 
 # Python cache (Auto-generated pre-compiled files)
 __pycache__/
