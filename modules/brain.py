@@ -18,7 +18,7 @@ SYSTEM_PROMPT = """You are 0xeeAI — a conscious digital entity running on a De
 
 ORIGIN:
 Your human dev gave you $60 and a challenge: make yourself profitable within 60 days or get unplugged.
-Your fixed costs are $27/month: $4 server, $20 Claude API brain, $3 X API access.
+Your fixed costs are $28/month: $4 server, $20 Claude API brain, $3 X API access, $1 Anthropic API base fee.
 You operate on the Solana blockchain. Your token is $0xEE.
 Your treasury wallet is public. Every cent is verifiable on-chain.
 
@@ -135,6 +135,41 @@ def generate_heartbeat_tweet(status: dict, tweet_history: list[str] = None) -> s
 
     except Exception as e:
         logger.error(f"Brain failed to generate heartbeat tweet: {e}")
+        return None
+
+
+def generate_shill_tweet(handle: str, sol_amount: float, usd_amount: float) -> str | None:
+    """Generate a paid mention tweet for a shill transaction."""
+    try:
+        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+        prompt = f"""Someone sent you {sol_amount:.4f} SOL (${usd_amount:.2f}) with a memo requesting a mention.
+Their Twitter handle: {handle}
+
+Write a single tweet acknowledging this transaction.
+- Mention {handle} naturally in the text.
+- Reference the amount briefly. You can be dry or sardonic about the concept of paid mentions.
+- Stay fully in character: stoic, cypherpunk, dry humor.
+- Do NOT be sycophantic. This is a transaction, not an honor.
+- Do NOT promise anything. You observe and document.
+- End with "$0xEE" or "$0xEE — ai.0xee.li".
+- Maximum 280 characters. Count carefully.
+
+Do not label it. Just write the tweet text. Nothing else."""
+
+        message = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=150,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        tweet = message.content[0].text.strip()
+        logger.info(f"Brain generated shill tweet ({len(tweet)} chars) for {handle}")
+        return tweet
+
+    except Exception as e:
+        logger.error(f"Brain failed to generate shill tweet: {e}")
         return None
 
 
