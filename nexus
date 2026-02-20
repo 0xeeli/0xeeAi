@@ -204,8 +204,9 @@ def ssh():
     if IS_VPS:
         print("[\033[91mERROR\033[0m] Already on the VPS.")
         return
-    print(f"[\033[95mBRIDGE\033[0m] Connecting to {VPS_USER}@{VPS_IP}:{VPS_PORT}...\n")
-    os.execvp("ssh", ["ssh", "-p", VPS_PORT, f"{VPS_USER}@{VPS_IP}"])
+    print(f"[\033[95mBRIDGE\033[0m] Connecting to {VPS_USER}@{VPS_IP}:{VPS_PORT} (venv active)...\n")
+    init = f"source {REMOTE_DIR.rstrip('/')}/venv/bin/activate && cd {REMOTE_DIR.rstrip('/')} && exec bash"
+    os.execvp("ssh", ["ssh", "-t", "-p", VPS_PORT, f"{VPS_USER}@{VPS_IP}", init])
 
 
 def _install_status():
