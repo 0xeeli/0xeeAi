@@ -1,0 +1,11 @@
+[Unit]
+Description=Timer for 0xeeAI Autonomous Treasury Cycle
+Requires=0xeeTerm-treasury.service
+
+[Timer]
+OnCalendar=*-*-* 09:00:00
+OnBootSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

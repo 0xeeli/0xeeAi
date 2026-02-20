@@ -1,0 +1,14 @@
+[Unit]
+Description=0xeeTerm — $0xEE Autonomous Treasury Cycle
+After=network.target
+
+[Service]
+Type=oneshot
+User=debian
+WorkingDirectory=/home/debian/0xeeAI
+ExecStart=/home/debian/0xeeAI/venv/bin/python3 /home/debian/0xeeAI/0xeeTerm treasury
+StandardOutput=append:/home/debian/0xeeAI/logs/treasury.log
+StandardError=append:/home/debian/0xeeAI/logs/treasury.log
+
+[Install]
+WantedBy=multi-user.target
