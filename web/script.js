@@ -1,6 +1,7 @@
 // URL du fichier public généré par le cerveau Python
 // Le cache-buster (?t=...) force ton navigateur et Lighttpd à cracher la dernière version
 const PUBLIC_DATA_URL = 'public.json';
+const RENT_GOAL = 38.00;
 
 async function syncWithMatrix() {
     const controller = new AbortController();
