@@ -112,20 +112,23 @@ def deploy(force: bool = False):
             print("[\033[96mCANCELLED\033[0m] Deploy aborted.")
             return
 
-    print(f"\n[\033[95mBRIDGE\033[0m] Uplink to {VPS_IP}...")
     try:
         if code_lines:
+            print(f"\n[\033[95mBRIDGE\033[0m] AI code → {VPS_IP}:{REMOTE_DIR}")
             subprocess.run(
                 ["rsync", "-avz", "--delete"] + code_excl + ssh_opt + [LOCAL_DIR, code_dst],
                 check=True
             )
+            print(f"[\033[92mOK\033[0m] AI code synced.")
         if web_lines:
+            print(f"\n[\033[95mBRIDGE\033[0m] web/ → {VPS_IP}:{REMOTE_WEB_DIR}")
             subprocess.run(
                 ["rsync", "-avz", "--delete", "--exclude=public.json"]
                 + ssh_opt + [LOCAL_WEB_DIR, web_dst],
                 check=True
             )
-        print(f"\n[\033[92mSUCCESS\033[0m] Code and web synced to remote.")
+            print(f"[\033[92mOK\033[0m] Web synced.")
+        print(f"\n[\033[92mSUCCESS\033[0m] Deploy complete.")
     except subprocess.CalledProcessError:
         print(f"\n[\033[91mFAIL\033[0m] Sync failed.")
 
