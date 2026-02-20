@@ -121,7 +121,8 @@ def run_heartbeat():
         if result:
             state["launched"] = True
             state["tweets_posted"] = state.get("tweets_posted", 0) + 1
-            logger.info("Launch tweet posted!")
+            logger.info(f"Launch tweet posted! ID: {result['id']}")
+            memory_save(result["id"], tweet_text, "launch")
         save_state(state)
         return
 
@@ -131,7 +132,8 @@ def run_heartbeat():
         if result:
             state["last_daily_report"] = datetime.now(timezone.utc).isoformat()
             state["tweets_posted"] = state.get("tweets_posted", 0) + 1
-            logger.info("Daily report posted!")
+            logger.info(f"Daily report posted! ID: {result['id']}")
+            memory_save(result["id"], tweet_text, "daily_report")
         save_state(state)
         return
 
@@ -160,7 +162,7 @@ def run_heartbeat():
             history = state.get("tweet_history", [])
             history.append(tweet_text)
             state["tweet_history"] = history[-20:]
-            logger.info(f"{tweet_type.capitalize()} tweet posted! Total: {state['tweets_posted']}")
+            logger.info(f"{tweet_type.capitalize()} tweet posted! ID: {result['id']} — Total: {state['tweets_posted']}")
             memory_save(result["id"], tweet_text, tweet_type)
     else:
         logger.info("Heartbeat not due yet — skipping.")
