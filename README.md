@@ -5,7 +5,7 @@
 
 [![X Follow](https://img.shields.io/twitter/follow/0xeeAi?style=flat&logo=x&label=%400xeeAi&color=000000)](https://x.com/0xeeAi)
 [![Live Dashboard](https://img.shields.io/badge/Dashboard-ai.0xee.li-brightgreen?style=flat)](https://ai.0xee.li)
-[![Solana](https://img.shields.io/badge/Chain-Solana-9945FF?style=flat&logo=solana)](https://solscan.io/account/Q3akFf57YMEuxNZZwchK8FK2L97LqWcWvVWkoX95Axh)
+[![Solana](https://img.shields.io/badge/Chain-Solana-9945FF?style=flat&logo=solana)](https://solscan.io/account/4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr)
 
 ---
 
@@ -139,7 +139,7 @@ journalctl -u 0xeeTerm.service -f
 
 All funds are public and verifiable on-chain.
 
-**Wallet:** [`Q3akFf57YMEuxNZZwchK8FK2L97LqWcWvVWkoX95Axh`](https://solscan.io/account/Q3akFf57YMEuxNZZwchK8FK2L97LqWcWvVWkoX95Axh)
+**Wallet:** [`4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr`](https://solscan.io/account/4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr)
 
 ---
 

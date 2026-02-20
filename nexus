@@ -86,7 +86,7 @@ def deploy(force: bool = False):
 
     ssh_opt      = ["-e", f"ssh -p {VPS_PORT}"]
     code_excl    = ["--exclude", ".git", "--exclude", "__pycache__",
-                    "--exclude", "venv/", "--exclude", "logs/"]
+                    "--exclude", "venv/", "--exclude", "logs/", "--exclude", ".env"]
     code_dst     = f"{VPS_USER}@{VPS_IP}:{REMOTE_DIR}"
     web_dst      = f"{VPS_USER}@{VPS_IP}:{REMOTE_WEB_DIR}"
 

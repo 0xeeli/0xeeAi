@@ -93,7 +93,7 @@ X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_SECRET
 ANTHROPIC_API_KEY
 
 # Solana
-SOLANA_WALLET=Q3akFf57YMEuxNZZwchK8FK2L97LqWcWvVWkoX95Axh
+SOLANA_WALLET=4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr
 SOLANA_RPC=https://api.mainnet-beta.solana.com
 SOLANA_PRIVATE_KEY=<base58>   # jamais loggé ni affiché
 
@@ -169,7 +169,7 @@ nexus install
 
 ## 8. Comptes et adresses
 
-- **Wallet treasury** : `Q3akFf57YMEuxNZZwchK8FK2L97LqWcWvVWkoX95Axh`
+- **Wallet treasury** : `4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr`
 - **Bot X** : [@0xeeAi](https://x.com/0xeeAi)
 - **Dev X** : [@0xeeli](https://x.com/0xeeli)
 - **Site** : [ai.0xee.li](https://ai.0xee.li)
