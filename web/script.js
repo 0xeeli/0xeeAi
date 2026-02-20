@@ -161,13 +161,13 @@ async function _getBlockhash() {
     throw new Error('All RPCs failed — try again later.');
 }
 
-// Detect any compatible Solana wallet (Phantom, Solflare, Backpack, …)
+// Detect any compatible Solana wallet — strict identity checks to avoid Zeal/extension conflicts
 function _detectWallet() {
-    if (window.phantom?.solana)      return window.phantom.solana; // Phantom v2+
-    if (window.solana?.isPhantom)    return window.solana;          // Phantom legacy
-    if (window.solflare?.isSolflare) return window.solflare;        // Solflare
-    if (window.backpack?.isBackpack) return window.backpack;         // Backpack
-    if (window.solana)               return window.solana;           // Generic fallback
+    if (window.phantom?.solana?.isPhantom)   return window.phantom.solana; // Phantom v2+
+    if (window.solana?.isPhantom)            return window.solana;          // Phantom legacy
+    if (window.solflare?.isSolflare)         return window.solflare;        // Solflare
+    if (window.backpack?.isBackpack)         return window.backpack;         // Backpack
+    if (window.solana?.connect)              return window.solana;           // Generic fallback
     return null;
 }
 
@@ -196,11 +196,17 @@ async function payNexusToll() {
     setStatus('Connecting wallet...', 'var(--text-muted)');
 
     try {
-        await wallet.connect();
+        const connectResp = await wallet.connect();
 
+        // Some wallets return publicKey in the connect() response, others set it on the object
+        // .toString() normalises both PublicKey objects and raw strings to base58
+        const rawKey = connectResp?.publicKey ?? wallet.publicKey;
+        const pubkeyStr = rawKey?.toString();
+        console.log('[0xeeAI] Wallet detected:', wallet, '| pubkey:', pubkeyStr);
+        if (!pubkeyStr || pubkeyStr === 'null' || pubkeyStr === '[object Object]') {
+            throw new Error('Wallet connected but publicKey unavailable — try disabling Zeal extension.');
+        }
         // Force our CDN version of PublicKey — avoids conflicts with wallet's bundled web3.js
-        const pubkeyStr = wallet.publicKey?.toString();
-        if (!pubkeyStr) throw new Error('Wallet connected but publicKey unavailable.');
         const sender = new solanaWeb3.PublicKey(pubkeyStr);
 
         setStatus('Fetching blockhash...', 'var(--text-muted)');
