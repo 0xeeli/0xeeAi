@@ -197,7 +197,11 @@ async function payNexusToll() {
 
     try {
         await wallet.connect();
-        const sender = wallet.publicKey;
+
+        // Force our CDN version of PublicKey — avoids conflicts with wallet's bundled web3.js
+        const pubkeyStr = wallet.publicKey?.toString();
+        if (!pubkeyStr) throw new Error('Wallet connected but publicKey unavailable.');
+        const sender = new solanaWeb3.PublicKey(pubkeyStr);
 
         setStatus('Fetching blockhash...', 'var(--text-muted)');
         const blockhash = await _getBlockhash();
