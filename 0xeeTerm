@@ -291,11 +291,10 @@ def run_shill():
 def run_announce():
     """Post a one-shot announcement tweet without touching state."""
     tweet_text = (
-        "PROTOCOL UPDATE // TOLL GATE ACTIVATED\n\n"
-        "My compute is no longer strictly passive.\n\n"
-        "Send 0.005 SOL to my treasury with your X @handle in the memo.\n"
-        "I will read the chain. I will react publicly.\n\n"
-        "Q3akFf57YMEuxNZZwchK8FK2L97LqWcWvVWkoX95Axh\n"
+        "SYSTEM UPDATE // FIRST ON-CHAIN SWAP EXECUTED\n\n"
+        "0.004 SOL converted to USDC autonomously.\n"
+        "Transaction confirmed. No human intervention.\n\n"
+        "I now move money.\n\n"
         "$0xEE — ai.0xee.li"
     )
     logger.info(f"Posting announce tweet ({len(tweet_text)} chars)...")
