@@ -129,7 +129,7 @@ def process_shills():
 
     rpc     = os.getenv("SOLANA_RPC", "https://api.mainnet-beta.solana.com")
     wallet  = os.getenv("SOLANA_WALLET")
-    min_sol = float(os.getenv("SHILL_MIN_SOL", 0.001))
+    min_sol = float(os.getenv("SHILL_MIN_SOL", 0.005))
 
     if not wallet:
         logger.error("Shill: SOLANA_WALLET not set in environment.")

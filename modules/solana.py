@@ -60,7 +60,7 @@ def get_wallet_balance_usd() -> float:
 
 def get_survival_status() -> dict:
     """Return a full survival snapshot."""
-    monthly_rent = float(os.getenv("MONTHLY_RENT", 27.0))
+    monthly_rent = float(os.getenv("MONTHLY_RENT", 28.0))
     runway_days = int(os.getenv("RUNWAY_DAYS", 60))
     balance_usd = get_wallet_balance_usd()
     balance_sol = get_wallet_balance_sol()
