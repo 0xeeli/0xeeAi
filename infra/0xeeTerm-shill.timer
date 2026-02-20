@@ -1,0 +1,10 @@
+[Unit]
+Description=Timer for 0xeeAI Shill-as-a-Service
+Requires=0xeeTerm-shill.service
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target
