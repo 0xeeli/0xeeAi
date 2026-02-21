@@ -40,7 +40,7 @@ logger = logging.getLogger("0xeeTerm")
 # Import modules
 sys.path.insert(0, str(Path(__file__).parent))
 from modules.twitter import post_tweet, get_mentions
-from modules.solana import get_survival_status
+from modules.solana import get_survival_status, check_helius
 from tweets.templates import (
     get_daily_report_tweet,
     get_launch_tweet,
@@ -237,19 +237,28 @@ def run_mentions():
 def run_status():
     """Print current survival status to console."""
     status = get_survival_status()
-    state = load_state()
+    state  = load_state()
+    helius = check_helius()
+
+    if helius["ok"]:
+        helius_line = "OK  (Helius)"
+    elif helius["configured"]:
+        helius_line = f"ERR ({helius['error']})"
+    else:
+        helius_line = "not set — using public RPC"
 
     print("\n╔══════════════════════════════════╗")
     print("║     0xeeTerm — STATUS REPORT      ║")
     print("╚══════════════════════════════════╝")
-    print(f"  💰 Treasury     : ${status['balance_usd']:.2f} ({status['balance_sol']:.4f} SOL)")
-    print(f"  📈 SOL Price    : ${status['sol_price']:.2f}")
-    print(f"  🎯 Monthly Rent : ${status['monthly_rent']:.2f}")
-    print(f"  📊 Funded       : {status['survival_pct']:.1f}%")
-    print(f"  🗓️  Months covered: {status['months_covered']:.2f}")
-    print(f"  🐦 Tweets posted: {state.get('tweets_posted', 0)}")
-    print(f"  ⏱️  Last heartbeat: {state.get('last_heartbeat', 'Never')}")
-    print(f"  🚀 Launched     : {state.get('launched', False)}")
+    print(f"  Treasury     : ${status['balance_usd']:.2f} ({status['balance_sol']:.4f} SOL)")
+    print(f"  SOL Price    : ${status['sol_price']:.2f}")
+    print(f"  Monthly Rent : ${status['monthly_rent']:.2f}")
+    print(f"  Funded       : {status['survival_pct']:.1f}%")
+    print(f"  Months covered: {status['months_covered']:.2f}")
+    print(f"  Helius RPC   : {helius_line}")
+    print(f"  Tweets posted: {state.get('tweets_posted', 0)}")
+    print(f"  Last heartbeat: {state.get('last_heartbeat', 'Never')}")
+    print(f"  Launched     : {state.get('launched', False)}")
     print("══════════════════════════════════\n")
 
 
@@ -286,8 +295,8 @@ def run_swap(from_token: str, to_token: str, amount: float, execute: bool = Fals
         print("  [ERROR] Could not fetch quote — check logs.")
         return
 
-    in_ui  = int(quote["inAmount"])  / (10 ** from_dec)
-    out_ui = int(quote["outAmount"]) / (10 ** to_dec)
+    in_ui  = int(float(quote["inAmount"]))  / (10 ** from_dec)
+    out_ui = int(float(quote["outAmount"])) / (10 ** to_dec)
     rate   = out_ui / in_ui if in_ui else 0
 
     print(f"\n  ─────────────────────────────────────")

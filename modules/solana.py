@@ -12,12 +12,50 @@ logger = logging.getLogger("0xeeTerm.solana")
 LAMPORTS_PER_SOL = 1_000_000_000
 
 
+_PUBLIC_RPC = "https://api.mainnet-beta.solana.com"
+
+
 def _get_rpc() -> str:
     """Return the best available RPC: Helius if key is set, else SOLANA_RPC env, else public fallback."""
     key = os.getenv("HELIUS_API_KEY")
     if key:
         return f"https://mainnet.helius-rpc.com/?api-key={key}"
-    return _get_rpc()
+    return os.getenv("SOLANA_RPC", _PUBLIC_RPC)
+
+
+def check_helius() -> dict:
+    """
+    Verify the Helius API key by making a lightweight getSlot call.
+    Returns {"configured": bool, "ok": bool, "rpc": str, "error": str|None}
+    """
+    key = os.getenv("HELIUS_API_KEY")
+    if not key:
+        return {"configured": False, "ok": False, "rpc": _PUBLIC_RPC, "error": "HELIUS_API_KEY not set"}
+    url = f"https://mainnet.helius-rpc.com/?api-key={key}"
+    try:
+        r = requests.post(url, json={"jsonrpc": "2.0", "id": 1, "method": "getSlot", "params": []}, timeout=8)
+        data = r.json()
+        if "error" in data:
+            return {"configured": True, "ok": False, "rpc": url, "error": data["error"].get("message", str(data["error"]))}
+        return {"configured": True, "ok": True, "rpc": url, "error": None}
+    except Exception as e:
+        return {"configured": True, "ok": False, "rpc": url, "error": str(e)}
+
+
+def _rpc_post(payload: dict) -> dict:
+    """POST to primary RPC, auto-fallback to public if primary returns an error or times out."""
+    primary = _get_rpc()
+    try:
+        r = requests.post(primary, json=payload, timeout=10)
+        data = r.json()
+        if "error" not in data:
+            return data
+        logger.warning(f"RPC primary error ({data['error'].get('message', data['error'])}) — falling back to public RPC")
+    except Exception as e:
+        logger.warning(f"RPC primary unreachable: {e} — falling back to public RPC")
+    # Fallback
+    r = requests.post(_PUBLIC_RPC, json=payload, timeout=10)
+    return r.json()
 
 USDC_MINT    = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 JITOSOL_MINT = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
@@ -41,17 +79,10 @@ def get_sol_price_usd() -> float:
 
 def get_wallet_balance_sol() -> float:
     """Get wallet SOL balance via RPC."""
-    rpc = _get_rpc()
     wallet = os.getenv("SOLANA_WALLET")
     try:
-        payload = {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "getBalance",
-            "params": [wallet],
-        }
-        r = requests.post(rpc, json=payload, timeout=10)
-        lamports = r.json()["result"]["value"]
+        data = _rpc_post({"jsonrpc": "2.0", "id": 1, "method": "getBalance", "params": [wallet]})
+        lamports = data["result"]["value"]
         sol = lamports / LAMPORTS_PER_SOL
         logger.debug(f"Wallet balance: {sol:.4f} SOL")
         return sol
@@ -60,15 +91,15 @@ def get_wallet_balance_sol() -> float:
         return 0.0
 
 
-def _get_token_balance_rpc(wallet: str, mint: str, rpc: str) -> float:
+def _get_token_balance_rpc(wallet: str, mint: str) -> float:
     """Fetch SPL token balance (uiAmount). Returns 0.0 if account doesn't exist."""
     try:
-        r = requests.post(rpc, json={
+        data = _rpc_post({
             "jsonrpc": "2.0", "id": 1,
             "method": "getTokenAccountsByOwner",
             "params": [wallet, {"mint": mint}, {"encoding": "jsonParsed"}],
-        }, timeout=10)
-        accounts = r.json()["result"]["value"]
+        })
+        accounts = data["result"]["value"]
         if not accounts:
             return 0.0
         return sum(
@@ -104,7 +135,6 @@ def get_spl_balances() -> dict:
     Returns dict with balance, price, and USD value for each token.
     Handles missing token accounts gracefully (returns 0.0).
     """
-    rpc    = _get_rpc()
     wallet = os.getenv("SOLANA_WALLET", "")
 
     if not wallet:
@@ -114,8 +144,8 @@ def get_spl_balances() -> dict:
         }
 
     prices      = _get_extended_prices()
-    usdc_bal    = _get_token_balance_rpc(wallet, USDC_MINT,    rpc)
-    jitosol_bal = _get_token_balance_rpc(wallet, JITOSOL_MINT, rpc)
+    usdc_bal    = _get_token_balance_rpc(wallet, USDC_MINT)
+    jitosol_bal = _get_token_balance_rpc(wallet, JITOSOL_MINT)
 
     # JitoSOL fallback: use SOL price if CoinGecko returns 0
     jitosol_price = prices["jitosol"] if prices["jitosol"] > 0 else prices["sol"]

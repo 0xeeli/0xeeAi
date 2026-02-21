@@ -24,6 +24,10 @@ def get_client() -> tweepy.Client:
 
 def post_tweet(text: str) -> dict | None:
     """Post a tweet and return the response."""
+    if len(text) > 280:
+        logger.warning(f"Tweet exceeds 280 chars ({len(text)}) — truncating")
+        cutoff = text.rfind(" ", 0, 277)
+        text = text[:cutoff if cutoff > 0 else 277] + "..."
     try:
         client = get_client()
         response = client.create_tweet(text=text)

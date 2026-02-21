@@ -63,9 +63,12 @@ def _compute_score(entry: dict) -> float:
 def _needs_fetch(entry: dict) -> bool:
     if not entry.get("fetched_at"):
         return True
-    last = datetime.fromisoformat(entry["fetched_at"])
-    elapsed = (datetime.now(timezone.utc) - last).total_seconds() / 3600
-    return elapsed >= FETCH_INTERVAL_HOURS
+    try:
+        last = datetime.fromisoformat(entry["fetched_at"])
+        elapsed = (datetime.now(timezone.utc) - last).total_seconds() / 3600
+        return elapsed >= FETCH_INTERVAL_HOURS
+    except (ValueError, TypeError):
+        return True  # Corrupted timestamp — refetch
 
 
 # ─────────────────────────────────────────────

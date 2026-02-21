@@ -233,7 +233,7 @@ def trigger(action: str):
 
     if IS_VPS:
         print(f"[\033[93mVPS\033[0m] Triggering 0xeeTerm {action} locally...\n")
-        subprocess.run(remote_cmd, shell=True)
+        subprocess.run(["bash", "-c", remote_cmd])
     else:
         print(f"[\033[95mBRIDGE\033[0m] Triggering 0xeeTerm {action} on {VPS_IP}...\n")
         subprocess.run(["ssh", "-p", VPS_PORT, f"{VPS_USER}@{VPS_IP}", remote_cmd])
@@ -349,7 +349,7 @@ def shill_cmd():
     remote_cmd = f"cd {REMOTE_DIR.rstrip('/')} && venv/bin/python3 0xeeTerm shill"
     if IS_VPS:
         print("[\033[93mVPS\033[0m] Running shill cycle locally...\n")
-        subprocess.run(remote_cmd, shell=True)
+        subprocess.run(["bash", "-c", remote_cmd])
     else:
         print(f"[\033[95mBRIDGE\033[0m] Running shill cycle on {VPS_IP}...\n")
         subprocess.run(["ssh", "-p", VPS_PORT, f"{VPS_USER}@{VPS_IP}", remote_cmd])
@@ -360,7 +360,7 @@ def memory_cmd():
     remote_cmd = f"cd {REMOTE_DIR.rstrip('/')} && venv/bin/python3 0xeeTerm memory"
     if IS_VPS:
         print("[\033[93mVPS\033[0m] Running memory metrics refresh locally...\n")
-        subprocess.run(remote_cmd, shell=True)
+        subprocess.run(["bash", "-c", remote_cmd])
     else:
         print(f"[\033[95mBRIDGE\033[0m] Running memory metrics refresh on {VPS_IP}...\n")
         subprocess.run(["ssh", "-p", VPS_PORT, f"{VPS_USER}@{VPS_IP}", remote_cmd])
@@ -371,7 +371,7 @@ def treasury_cmd():
     remote_cmd = f"cd {REMOTE_DIR.rstrip('/')} && venv/bin/python3 0xeeTerm treasury"
     if IS_VPS:
         print("[\033[93mVPS\033[0m] Running treasury cycle locally...\n")
-        subprocess.run(remote_cmd, shell=True)
+        subprocess.run(["bash", "-c", remote_cmd])
     else:
         print(f"[\033[95mBRIDGE\033[0m] Running treasury cycle on {VPS_IP}...\n")
         subprocess.run(["ssh", "-p", VPS_PORT, f"{VPS_USER}@{VPS_IP}", remote_cmd])
@@ -379,11 +379,16 @@ def treasury_cmd():
 
 def swap_cmd(from_token: str, to_token: str, amount: str, now: bool = False):
     """Manual swap via Jupiter on the VPS (or locally). --now prompts for confirmation."""
-    now_flag   = " --now" if now else ""
-    remote_cmd = f"cd {REMOTE_DIR.rstrip('/')} && venv/bin/python3 0xeeTerm swap {from_token} {to_token} {amount}{now_flag}"
+    rdir = REMOTE_DIR.rstrip('/')
+    py_cmd = [f"{rdir}/venv/bin/python3", f"{rdir}/0xeeTerm",
+              "swap", from_token, to_token, amount]
+    if now:
+        py_cmd.append("--now")
+    # SSH side still needs a shell string (cd + activate)
+    remote_cmd = f"cd {rdir} && venv/bin/python3 0xeeTerm swap {from_token} {to_token} {amount}" + (" --now" if now else "")
     if IS_VPS:
         print(f"[\033[93mVPS\033[0m] Swap {amount} {from_token.upper()} → {to_token.upper()} locally...\n")
-        subprocess.run(remote_cmd, shell=True)
+        subprocess.run(py_cmd)
     else:
         print(f"[\033[95mBRIDGE\033[0m] Swap {amount} {from_token.upper()} → {to_token.upper()} on {VPS_IP}...\n")
         # -t allocates a pseudo-TTY so interactive prompts work over SSH
@@ -415,7 +420,7 @@ def sys_status():
 
     if IS_VPS:
         print("[\033[93mVPS\033[0m] Lecture directe des senseurs...\n")
-        subprocess.run(remote_cmd, shell=True)
+        subprocess.run(["bash", "-c", remote_cmd])
     else:
         print(f"[\033[95mBRIDGE\033[0m] Interrogation SSH sur {VPS_IP}...\n")
         subprocess.run(["ssh", "-p", VPS_PORT, f"{VPS_USER}@{VPS_IP}", remote_cmd])

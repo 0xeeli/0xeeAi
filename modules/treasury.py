@@ -27,6 +27,15 @@ JITOSOL_MINT = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
 USDC_MINT    = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 MEMO_PROGRAM = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
 
+
+def _get_rpc() -> str:
+    """Helius if HELIUS_API_KEY is set, else SOLANA_RPC env, else public fallback."""
+    key = os.getenv("HELIUS_API_KEY")
+    if key:
+        return f"https://mainnet.helius-rpc.com/?api-key={key}"
+    return os.getenv("SOLANA_RPC", "https://api.mainnet-beta.solana.com")
+
+
 _JUPITER_BASE = os.getenv("JUPITER_API_URL", "https://lite-api.jup.ag/swap/v1")
 JUPITER_QUOTE = f"{_JUPITER_BASE}/quote"
 JUPITER_SWAP  = f"{_JUPITER_BASE}/swap"
@@ -139,7 +148,7 @@ def get_portfolio() -> dict:
     """
     from modules.solana import get_wallet_balance_sol
 
-    rpc    = os.getenv("SOLANA_RPC", "https://api.mainnet-beta.solana.com")
+    rpc    = _get_rpc()
     wallet = os.getenv("SOLANA_WALLET", "")
     token  = os.getenv("TOKEN_ADDRESS", "")
 
@@ -208,7 +217,7 @@ def swap(
     Returns transaction signature, or None on failure / dry-run.
     """
     wallet = os.getenv("SOLANA_WALLET", "")
-    rpc    = os.getenv("SOLANA_RPC", "https://api.mainnet-beta.solana.com")
+    rpc    = _get_rpc()
 
     try:
         quote = get_quote(input_mint, output_mint, amount_lamports, slippage_bps)
@@ -217,8 +226,8 @@ def swap(
 
         in_dec   = MINT_DECIMALS.get(input_mint,  9)
         out_dec  = MINT_DECIMALS.get(output_mint, 9)
-        in_ui    = int(quote["inAmount"])  / (10 ** in_dec)
-        out_ui   = int(quote["outAmount"]) / (10 ** out_dec)
+        in_ui    = int(float(quote["inAmount"]))  / (10 ** in_dec)
+        out_ui   = int(float(quote["outAmount"])) / (10 ** out_dec)
         in_sym   = MINT_SYMBOLS.get(input_mint,  input_mint[:8])
         out_sym  = MINT_SYMBOLS.get(output_mint, output_mint[:8])
         logger.info(f"Treasury: swap quote — {in_ui:.6f} {in_sym} → {out_ui:.6f} {out_sym}")
@@ -308,7 +317,7 @@ def pay_bill(recipient_address: str, amount_sol: float, memo: str) -> str | None
     Use cases: VPS rent, API subscriptions, any SOL-compatible invoice.
     DRY_RUN protection is enforced — set DRY_RUN=false to execute.
     """
-    rpc = os.getenv("SOLANA_RPC", "https://api.mainnet-beta.solana.com")
+    rpc = _get_rpc()
 
     logger.info(
         f"Treasury: pay_bill — {amount_sol:.4f} SOL → "
@@ -401,10 +410,19 @@ def _get_due_bills() -> list:
     Parse BILLS env var and return bills due today.
     Format: [{"name":"VPS","address":"<pubkey>","amount_sol":0.05,"day_of_month":1}]
     """
+    required_keys = {"name", "address", "amount_sol", "day_of_month"}
     try:
         bills = json.loads(os.getenv("BILLS", "[]"))
         today = date.today()
-        return [b for b in bills if b.get("day_of_month") == today.day]
+        valid = []
+        for b in bills:
+            missing = required_keys - set(b.keys())
+            if missing:
+                logger.error(f"Treasury: bill entry missing keys {missing} — skipped: {b}")
+                continue
+            if b["day_of_month"] == today.day:
+                valid.append(b)
+        return valid
     except Exception as e:
         logger.error(f"Treasury: failed to parse BILLS env var: {e}")
         return []

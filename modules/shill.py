@@ -207,7 +207,8 @@ def process_shills():
 
         processed.add(sig)
 
-    state["processed_signatures"] = list(processed)
+    # Cap to last 500 to prevent shill_state.json from growing unboundedly
+    state["processed_signatures"] = list(processed)[-500:]
     _save_state(state)
 
     logger.info(
