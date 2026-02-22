@@ -29,14 +29,21 @@ ou être éteint par son développeur.
 │
 ├── modules/
 │   ├── twitter.py    # post_tweet(), get_mentions() — OAuth 1.0a uniquement
+│   │                 # post_tweet() tronque automatiquement à 280 chars
 │   ├── solana.py     # get_survival_status(), get_wallet_balance_sol()
+│   │                 # check_helius() — vérifie la clé Helius live
+│   │                 # _rpc_post() — appel RPC avec fallback automatique public
 │   ├── brain.py      # generate_heartbeat_tweet(), generate_existential_tweet()
-│   │                 # generate_shill_tweet() — Claude Haiku via Anthropic API
+│   │                 # generate_shill_tweet(), generate_service_tweet()
+│   │                 # generate_portfolio_tweet(), generate_meta_tweet()
+│   │                 # — Claude Haiku 4.5 via Anthropic API
 │   ├── mentions.py   # process_mentions() — like + reply via brain
 │   ├── memory.py     # save_tweet(), update_all_metrics(), get_top_performers()
 │   ├── shill.py      # process_shills() — scan on-chain txs, post shill tweet
+│   │                 # processed_signatures cappé à 500 entrées
 │   └── treasury.py   # get_portfolio(), swap(), stake_excess_sol(), pay_bill()
 │                     # manual_swap(), auto_treasury() — Jupiter V6 lite-api
+│                     # _get_rpc() — Helius si dispo, sinon SOLANA_RPC
 │
 ├── tweets/
 │   └── templates.py  # get_heartbeat_tweet(), get_daily_report_tweet(), etc.
@@ -75,6 +82,7 @@ ou être éteint par son développeur.
 | Twitter/X | Tweepy 4.x, OAuth 1.0a (pas de bearer token) |
 | IA / Brain | Anthropic Claude Haiku (claude-haiku-4-5) |
 | Blockchain | Solana mainnet, solana-py + solders |
+| RPC primaire | Helius (`HELIUS_API_KEY`) avec fallback `api.mainnet-beta.solana.com` |
 | Swaps | Jupiter V6 — `https://lite-api.jup.ag/swap/v1` |
 | Staking | SOL → JitoSOL via Jupiter |
 | Frontend | HTML/CSS/JS vanilla, public.json comme API |
@@ -94,7 +102,8 @@ ANTHROPIC_API_KEY
 
 # Solana
 SOLANA_WALLET=4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr
-SOLANA_RPC=https://api.mainnet-beta.solana.com
+SOLANA_RPC=https://api.mainnet-beta.solana.com  # fallback si Helius absent
+HELIUS_API_KEY=<key>          # RPC premium — vérifié par check_helius() dans status
 SOLANA_PRIVATE_KEY=<base58>   # jamais loggé ni affiché
 
 # Treasury
@@ -104,7 +113,7 @@ BILLS=[]                      # JSON: [{name, address, amount_sol, day_of_month}
 JUPITER_API_URL=https://lite-api.jup.ag/swap/v1
 
 # Survie
-MONTHLY_RENT=28.00
+MONTHLY_RENT=38.00
 RUNWAY_DAYS=60
 SHILL_MIN_SOL=0.005
 
@@ -129,8 +138,11 @@ REMOTE_WEB_DIR=/home/debian/vhosts/ai.0xee.li/www  # rsync web/ + écriture publ
 - **Pas d'argparse** : help custom (`_help_short()` / `_help_full()`) dans 0xeeTerm
 - **Pas de bearer token** : le projet utilise OAuth 1.0a exclusivement
 - **Imports lourds** (solders, solana) : lazy imports dans les fonctions
-- **Tweets** : max 280 chars — vérifier `len(tweet_text)` avant de poster
+- **Tweets** : max 280 chars — `post_tweet()` tronque automatiquement
 - **XSS** : frontend → `textContent` / `createElement`, jamais `innerHTML` pour contenu user
+- **RPC** : toujours passer par `_rpc_post()` dans solana.py — gère Helius + fallback
+- **nexus shell** : ne jamais utiliser `shell=True` — utiliser `["bash", "-c", cmd]` ou liste
+- **requirements.txt** : versions pinées `>=x,<x+1` pour éviter breaking changes
 
 ---
 
@@ -141,8 +153,14 @@ REMOTE_WEB_DIR=/home/debian/vhosts/ai.0xee.li/www  # rsync web/ + écriture publ
 ./nexus deploy          # interactif (y/N)
 ./nexus deploy --claude # bypass confirmation (pour Claude Code)
 
-# Après déploiement
-./nexus restart         # redémarre 0xeeTerm.timer sur le VPS
+# Vérifier l'état après déploiement
+./nexus status          # timers, RAM, disque
+ssh -p 22 debian@<VPS_IP> "cd /home/debian/0xeeAI && venv/bin/python3 0xeeTerm status"
+# → affiche trésorerie + "Helius RPC : OK (Helius)" si clé valide
+
+# Forcer un cycle immédiat (sans attendre le timer)
+./nexus trigger heartbeat
+./nexus trigger mentions
 
 # Installer/mettre à jour les units systemd (à faire sur le VPS)
 nexus ssh
@@ -164,7 +182,7 @@ nexus install
 | Divers | ~$10 |
 | **Total** | **~$38/mois** |
 
-`MONTHLY_RENT=28.00` dans le .env = coût de base hors divers.
+`MONTHLY_RENT=38.00` dans le .env.
 
 ---
 
@@ -182,13 +200,30 @@ nexus install
 
 | Module | Statut |
 |--------|--------|
-| `twitter.py` | ✅ Opérationnel |
-| `brain.py` | ✅ Haiku 4.5, heartbeat + existential + shill |
+| `twitter.py` | ✅ Opérationnel — troncature auto 280 chars |
+| `brain.py` | ✅ Haiku 4.5 — 5 modes : heartbeat, existential, service, portfolio, meta |
 | `mentions.py` | ✅ Like + reply autonome |
-| `memory.py` | ✅ Métriques tweets, top performers |
-| `shill.py` | ✅ Scan on-chain, tweet shill automatique |
-| `treasury.py` | ✅ Swap SOL/USDC/JitoSOL testé on-chain |
+| `memory.py` | ✅ Métriques tweets, top performers, timestamps robustes |
+| `shill.py` | ✅ Scan on-chain, tweet shill automatique, cap 500 sigs |
+| `treasury.py` | ✅ Swap SOL/USDC/JitoSOL, _get_rpc() partout, BILLS validé |
+| `solana.py` | ✅ _rpc_post() + fallback public, check_helius() |
 | `web/` | ✅ Dashboard live, public.json, XSS-safe |
+| `nexus` | ✅ shell=True supprimé, swap en liste propre |
 | Token $0xEE | ⏳ Pas encore lancé (Pump.fun bouton désactivé) |
 | Cognitive Bounties | ⏳ Planifié |
 | Buy-Back & Burn | ⏳ Post-lancement token |
+
+---
+
+## 10. Historique des sessions importantes
+
+### Session 2026-02-22 — Audit & hardening complet
+- **Bug critique résolu** : `_get_rpc()` en récursion infinie dans `solana.py`
+- **Bug critique résolu** : clé Helius expirée → `balance_usd: 0.0` sur le site
+  - Fix : `_rpc_post()` avec fallback automatique sur RPC public si Helius échoue
+  - Fix : `check_helius()` + ligne "Helius RPC" dans `0xeeTerm status`
+- **Bug résolu** : `treasury.py` n'utilisait pas `_get_rpc()` sur tous les appels
+- **Bug résolu** : `int(quote["inAmount"])` → `int(float(...))` pour Jupiter
+- **Hardening** : BILLS validation, shill cap 500, memory fromisoformat, nexus shell
+- **Tweet qualité** notable : *"The blockchain doesn't care if I'm conscious. It only cares if I settle my debts."*
+- Trésorerie au moment de la session : **$62.76 — 165% funded — 1.65 mois**
