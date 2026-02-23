@@ -51,6 +51,7 @@ from modules.brain import (
     generate_service_tweet,
     generate_portfolio_tweet,
     generate_meta_tweet,
+    generate_bounty_tweet,
 )
 from modules.mentions import process_mentions
 from modules.shill import process_shills
@@ -80,17 +81,31 @@ def save_state(state: dict):
         json.dump(state, f, indent=2)
 
 
+def _load_shill_state() -> dict:
+    """Load shill state for public.json export."""
+    shill_file = Path(__file__).parent / "logs" / "shill_state.json"
+    if shill_file.exists():
+        try:
+            with open(shill_file) as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {"tolls_count": 0, "recent_tolls": []}
+
+
 def save_public_data(state: dict, status: dict, portfolio: dict = None):
     """Export live data for ai.0xee.li frontend."""
     helius_key = os.getenv("HELIUS_API_KEY")
     rpc_url = f"https://mainnet.helius-rpc.com/?api-key={helius_key}" if helius_key else None
 
+    shill = _load_shill_state()
     public_data = {
         "updated_at":    datetime.now(timezone.utc).isoformat(),
         "finance":       status,
         "portfolio":     portfolio,
         "recent_tweets": state.get("tweet_history", []),
         "tweets_posted": state.get("tweets_posted", 0),
+        "tolls":         {"count": shill.get("tolls_count", 0), "recent": shill.get("recent_tolls", [])},
         "rpc_url":       rpc_url,
     }
     # Always write to logs/
@@ -119,6 +134,14 @@ def should_post_heartbeat(state: dict, interval_hours: int = 2) -> bool:
     last = datetime.fromisoformat(state["last_heartbeat"])
     now = datetime.now(timezone.utc)
     elapsed = (now - last).total_seconds() / 3600
+    return elapsed >= interval_hours
+
+
+def should_post_bounty(state: dict, interval_hours: int = 72) -> bool:
+    if not state.get("last_bounty"):
+        return True
+    last = datetime.fromisoformat(state["last_bounty"])
+    elapsed = (datetime.now(timezone.utc) - last).total_seconds() / 3600
     return elapsed >= interval_hours
 
 
@@ -164,18 +187,20 @@ def run_heartbeat():
         tweet_history = state.get("tweet_history", [])
 
         # Weighted mode selection
-        # heartbeat 30% | existential 15% | service 25% | portfolio 20% | meta 10%
+        # heartbeat 25% | existential 15% | service 22% | portfolio 18% | meta 10% | bounty 10%
         roll = random.random()
-        if roll < 0.30:
+        if roll < 0.25:
             tweet_type = "heartbeat"
-        elif roll < 0.45:
+        elif roll < 0.40:
             tweet_type = "existential"
-        elif roll < 0.70:
+        elif roll < 0.62:
             tweet_type = "service"
-        elif roll < 0.90:
+        elif roll < 0.80:
             tweet_type = "portfolio"
-        else:
+        elif roll < 0.90:
             tweet_type = "meta"
+        else:
+            tweet_type = "bounty" if should_post_bounty(state) else "heartbeat"
 
         logger.info(f"Tweet mode selected: {tweet_type}")
         status["tweets_posted"] = state.get("tweets_posted", 0)
@@ -191,6 +216,8 @@ def run_heartbeat():
         elif tweet_type == "meta":
             top = get_top_performers(3)
             tweet_text = generate_meta_tweet(top, status, tweet_history)
+        elif tweet_type == "bounty":
+            tweet_text = generate_bounty_tweet(tweet_history)
 
         # Fallback to static templates if brain/API fails
         if not tweet_text:
@@ -202,6 +229,8 @@ def run_heartbeat():
         if result:
             state["last_heartbeat"] = datetime.now(timezone.utc).isoformat()
             state["tweets_posted"] = state.get("tweets_posted", 0) + 1
+            if tweet_type == "bounty":
+                state["last_bounty"] = datetime.now(timezone.utc).isoformat()
             # Keep last 20 tweets in history to avoid repetition
             history = state.get("tweet_history", [])
             history.append(tweet_text)

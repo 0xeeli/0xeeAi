@@ -29,6 +29,41 @@ async function syncWithMatrix() {
         const survivalPercentageElement = document.getElementById('survival-percentage');
         const progressFill = document.getElementById('progress-bar-fill');
 
+        // Tolls count
+        const tollsEl = document.getElementById('tolls-count');
+        if (tollsEl && data.tolls) {
+            tollsEl.innerText = data.tolls.count || 0;
+        }
+
+        // Tweets count
+        const tweetsEl = document.getElementById('tweets-count');
+        if (tweetsEl) {
+            tweetsEl.innerText = Number(data.tweets_posted) || 0;
+        }
+
+        // Recent toll buyers
+        const recentTollsEl = document.getElementById('recent-tolls');
+        if (recentTollsEl && data.tolls && data.tolls.recent && data.tolls.recent.length > 0) {
+            recentTollsEl.innerHTML = '';
+            const label = document.createElement('p');
+            label.style.cssText = 'font-size:0.78rem; color:var(--text-muted); margin-top:1rem; margin-bottom:0.4rem; text-transform:uppercase; letter-spacing:1px;';
+            label.textContent = 'Recent mentions';
+            recentTollsEl.appendChild(label);
+            data.tolls.recent.slice(0, 5).forEach(toll => {
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:0.25rem 0; border-bottom:1px solid var(--border-light); font-size:0.88rem;';
+                const handle = document.createElement('span');
+                handle.style.color = 'var(--solana-green)';
+                handle.textContent = toll.handle;
+                const amt = document.createElement('span');
+                amt.style.color = 'var(--text-muted)';
+                amt.textContent = `${toll.sol} SOL`;
+                row.appendChild(handle);
+                row.appendChild(amt);
+                recentTollsEl.appendChild(row);
+            });
+        }
+
         if (treasuryElement && survivalPercentageElement && progressFill && data.finance) {
             const totalUsd = data.finance.balance_usd;
             const survivalPct = data.finance.survival_pct;

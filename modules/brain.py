@@ -327,6 +327,50 @@ def generate_portfolio_tweet(status: dict, tweet_history: list[str] = None) -> s
         return None
 
 
+def generate_bounty_tweet(tweet_history: list[str] = None) -> str | None:
+    """Generate a Cognitive Bounty challenge tweet. First correct reply wins a free Nexus Toll mention."""
+    try:
+        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+        history_block = ""
+        if tweet_history:
+            recent = "\n".join(f"- {t}" for t in tweet_history[-5:])
+            history_block = f"\nRECENT TWEETS (avoid these themes):\n{recent}\n"
+
+        prompt = f"""Write a single Cognitive Bounty tweet — a challenge or riddle for your followers.
+{history_block}
+Rules:
+- Post a clever challenge: a blockchain/crypto riddle, a code puzzle, a logic trap, or a cypherpunk thought experiment. Be creative and vary the type.
+- Make it genuinely solvable but not trivially easy.
+- State the prize clearly: first correct reply wins a free Nexus Toll mention (normally 0.005 SOL).
+- Tone: dry, precise, slightly sadistic. You enjoy watching humans compute.
+- End with "$0xEE" or "$0xEE — ai.0xee.li".
+- 200 to 280 characters. Use the space.
+
+Examples of challenge types (pick a different one each time):
+- "A Solana validator has X slots. If..."
+- "This Rust snippet panics. First reply with why wins..."
+- "I execute 1 swap every N seconds. At this rate..."
+- "Name the only hash function used in Solana consensus."
+
+Do not label it. Just write the tweet text. Nothing else."""
+
+        message = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=220,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        tweet = message.content[0].text.strip()
+        logger.info(f"Brain generated bounty tweet ({len(tweet)} chars)")
+        return tweet
+
+    except Exception as e:
+        logger.error(f"Brain failed to generate bounty tweet: {e}")
+        return None
+
+
 def generate_meta_tweet(top_performers: list, status: dict, tweet_history: list[str] = None) -> str | None:
     """Generate a tweet about capabilities and self-awareness, informed by top-performing content."""
     try:

@@ -17,6 +17,7 @@ import json
 import logging
 import requests
 from pathlib import Path
+from datetime import datetime, timezone
 
 logger = logging.getLogger("0xeeTerm.shill")
 
@@ -37,7 +38,7 @@ def _load_state() -> dict:
                 return json.load(f)
         except Exception as e:
             logger.error(f"Shill: failed to load state: {e}")
-    return {"processed_signatures": []}
+    return {"processed_signatures": [], "tolls_count": 0, "recent_tolls": []}
 
 
 def _save_state(state: dict):
@@ -127,7 +128,7 @@ def process_shills():
     from modules.brain import generate_shill_tweet
     from modules.twitter import post_tweet
 
-    rpc     = os.getenv("SOLANA_RPC", "https://api.mainnet-beta.solana.com")
+    from modules.solana import _get_rpc
     wallet  = os.getenv("SOLANA_WALLET")
     min_sol = float(os.getenv("SHILL_MIN_SOL", 0.005))
 
@@ -138,6 +139,7 @@ def process_shills():
     state     = _load_state()
     processed = set(state.get("processed_signatures", []))
 
+    rpc        = _get_rpc()
     signatures = _get_recent_signatures(wallet, rpc)
     if not signatures:
         logger.info("Shill: no recent transactions found.")
@@ -200,6 +202,15 @@ def process_shills():
             if result:
                 logger.info(f"Shill: tweet posted for {handle} — ID: {result['id']}")
                 new_shills += 1
+                # Track successful toll
+                state["tolls_count"] = state.get("tolls_count", 0) + 1
+                recent = state.get("recent_tolls", [])
+                recent.insert(0, {
+                    "handle": handle,
+                    "sol":    round(sol_received, 4),
+                    "at":     datetime.now(timezone.utc).isoformat(),
+                })
+                state["recent_tolls"] = recent[:10]
             else:
                 logger.error(f"Shill: post_tweet failed for {handle}.")
         except Exception as e:
