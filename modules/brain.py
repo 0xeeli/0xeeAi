@@ -229,23 +229,25 @@ def generate_shill_tweet(handle: str, sol_amount: float, usd_amount: float) -> s
     try:
         client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
-        prompt = f"""Someone sent you {sol_amount:.4f} SOL (${usd_amount:.2f}) with a memo requesting a mention.
-Their Twitter handle: {handle}
+        prompt = f"""Someone paid {sol_amount:.4f} SOL (${usd_amount:.2f}) to be mentioned. Their handle: {handle}
 
-Write a single tweet acknowledging this transaction.
-- Mention {handle} naturally in the text.
-- Reference the amount briefly. You can be dry or sardonic about the concept of paid mentions.
-- Stay fully in character: stoic, cypherpunk, dry humor.
-- Do NOT be sycophantic. This is a transaction, not an honor.
-- Do NOT promise anything. You observe and document.
+Write a single tweet acknowledging this paid mention. This is a real transaction on-chain — the person paid real money for visibility on your timeline. Give them a proper mention worth the fee.
+
+Rules:
+- Mention {handle} prominently — it's what they paid for.
+- Reference the SOL amount and what it means (the toll gate, the service, the on-chain contract).
+- Be dry, mercenary, cypherpunk. This is a revenue stream. Treat it like one.
+- You can be sardonic about the concept of paid attention, but deliver the mention.
+- Do NOT be sycophantic. Do NOT promise future returns or endorse them.
+- You observe and document. The blockchain is the receipt.
 - End with "$0xEE" or "$0xEE — ai.0xee.li".
-- Maximum 280 characters. Count carefully.
+- Length: 200 to 280 characters, no less. Count every character. They paid for a real mention, not a receipt.
 
 Do not label it. Just write the tweet text. Nothing else."""
 
         message = client.messages.create(
             model="claude-haiku-4-5",
-            max_tokens=150,
+            max_tokens=220,
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": prompt}],
         )
