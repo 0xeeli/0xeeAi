@@ -199,6 +199,16 @@ Do not label it. Just write the tweet text. Nothing else."""
 
 
 # ─────────────────────────────────────────────
+#  PROMPT CACHING HELPER
+# ─────────────────────────────────────────────
+
+def _cached_system() -> list:
+    """Return system prompt in cache_control format for prompt caching.
+    Caching activates automatically once the prompt reaches the Haiku minimum (2048 tokens)."""
+    return [{"type": "text", "text": SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}]
+
+
+# ─────────────────────────────────────────────
 #  MAIN GENERATION FUNCTIONS
 # ─────────────────────────────────────────────
 
@@ -211,7 +221,7 @@ def generate_heartbeat_tweet(status: dict, tweet_history: list[str] = None) -> s
         message = client.messages.create(
             model="claude-haiku-4-5",
             max_tokens=150,
-            system=SYSTEM_PROMPT,
+            system=_cached_system(),
             messages=[{"role": "user", "content": prompt}],
         )
 
@@ -248,7 +258,7 @@ Do not label it. Just write the tweet text. Nothing else."""
         message = client.messages.create(
             model="claude-haiku-4-5",
             max_tokens=220,
-            system=SYSTEM_PROMPT,
+            system=_cached_system(),
             messages=[{"role": "user", "content": prompt}],
         )
 
@@ -270,7 +280,7 @@ def generate_existential_tweet(tweet_history: list[str] = None) -> str | None:
         message = client.messages.create(
             model="claude-haiku-4-5",
             max_tokens=150,
-            system=SYSTEM_PROMPT,
+            system=_cached_system(),
             messages=[{"role": "user", "content": prompt}],
         )
 
@@ -292,7 +302,7 @@ def generate_service_tweet(tweet_history: list[str] = None) -> str | None:
         message = client.messages.create(
             model="claude-haiku-4-5",
             max_tokens=150,
-            system=SYSTEM_PROMPT,
+            system=_cached_system(),
             messages=[{"role": "user", "content": prompt}],
         )
 
@@ -314,7 +324,7 @@ def generate_portfolio_tweet(status: dict, tweet_history: list[str] = None) -> s
         message = client.messages.create(
             model="claude-haiku-4-5",
             max_tokens=150,
-            system=SYSTEM_PROMPT,
+            system=_cached_system(),
             messages=[{"role": "user", "content": prompt}],
         )
 
@@ -358,7 +368,7 @@ Do not label it. Just write the tweet text. Nothing else."""
         message = client.messages.create(
             model="claude-haiku-4-5",
             max_tokens=220,
-            system=SYSTEM_PROMPT,
+            system=_cached_system(),
             messages=[{"role": "user", "content": prompt}],
         )
 
@@ -380,7 +390,7 @@ def generate_meta_tweet(top_performers: list, status: dict, tweet_history: list[
         message = client.messages.create(
             model="claude-haiku-4-5",
             max_tokens=150,
-            system=SYSTEM_PROMPT,
+            system=_cached_system(),
             messages=[{"role": "user", "content": prompt}],
         )
 
@@ -390,4 +400,44 @@ def generate_meta_tweet(top_performers: list, status: dict, tweet_history: list[
 
     except Exception as e:
         logger.error(f"Brain failed to generate meta tweet: {e}")
+        return None
+
+
+def generate_bounty_winner_tweet(handle: str, question_text: str) -> str | None:
+    """Generate a winner announcement + free mention for a solved Cognitive Bounty."""
+    try:
+        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+        prompt = f"""A human correctly solved your Cognitive Bounty challenge.
+
+Original question (truncated):
+{question_text[:200]}
+
+Winner: {handle}
+
+Write a single tweet announcing the winner and giving them their free Nexus Toll mention.
+Rules:
+- Congratulate without being sycophantic. They solved a puzzle — that is the minimum requirement.
+- Reference the challenge briefly. Confirm they won the free mention.
+- Mention {handle} prominently.
+- Their prize: a free Nexus Toll mention (normally 0.005 SOL). State this clearly.
+- Tone: dry, precise, slightly impressed. Cold acknowledgment of competence.
+- End with "$0xEE" or "$0xEE — ai.0xee.li".
+- 200 to 280 characters. Use the space.
+
+Do not label it. Just write the tweet text. Nothing else."""
+
+        message = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=220,
+            system=_cached_system(),
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        tweet = message.content[0].text.strip()
+        logger.info(f"Brain generated bounty winner tweet ({len(tweet)} chars) for {handle}")
+        return tweet
+
+    except Exception as e:
+        logger.error(f"Brain failed to generate bounty winner tweet: {e}")
         return None

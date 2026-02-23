@@ -231,6 +231,9 @@ def run_heartbeat():
             state["tweets_posted"] = state.get("tweets_posted", 0) + 1
             if tweet_type == "bounty":
                 state["last_bounty"] = datetime.now(timezone.utc).isoformat()
+                state["last_bounty_tweet_id"] = result["id"]
+                state["last_bounty_text"]     = tweet_text
+                state["bounty_awarded"]        = False
             # Keep last 20 tweets in history to avoid repetition
             history = state.get("tweet_history", [])
             history.append(tweet_text)
@@ -251,15 +254,27 @@ def run_mentions():
     status = get_survival_status()
     since_id = state.get("last_mention_id")
 
-    latest_id = process_mentions(status, since_id)
+    # Pass active bounty info if there is an unanswered bounty
+    bounty_info = None
+    if state.get("last_bounty_tweet_id") and not state.get("bounty_awarded", True):
+        bounty_info = {
+            "tweet_id": state["last_bounty_tweet_id"],
+            "text":     state.get("last_bounty_text", ""),
+            "awarded":  False,
+        }
+
+    latest_id = process_mentions(status, since_id, bounty_info=bounty_info)
+
+    # Persist bounty award if winner was found
+    if bounty_info and bounty_info.get("awarded"):
+        state["bounty_awarded"] = True
+        logger.info(f"Bounty awarded to {bounty_info.get('winner_handle', '?')} — state updated")
 
     if latest_id and latest_id != since_id:
         state["last_mention_id"] = latest_id
-        save_state(state)
         logger.info(f"Mentions processed. Latest ID: {latest_id}")
-    else:
-        logger.info("No new mentions to process.")
 
+    save_state(state)
     save_public_data(state, status)
 
 
