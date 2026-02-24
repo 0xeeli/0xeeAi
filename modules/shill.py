@@ -189,7 +189,8 @@ def _parse_service(memo: str) -> dict:
     if not memo:
         return {"type": None}
 
-    memo = memo.strip()
+    # Public RPC prefixes memo with "[N] " (byte length) — strip it
+    memo = re.sub(r'^\[\d+\]\s*', '', memo.strip())
 
     # GENESIS @handle
     if re.match(r"^GENESIS\s+@\w", memo, re.IGNORECASE):
