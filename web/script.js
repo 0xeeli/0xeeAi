@@ -170,16 +170,59 @@ document.addEventListener('DOMContentLoaded', () => {
     syncWithMatrix();
     setInterval(syncWithMatrix, 60000);
 
-    const tollBtn = document.getElementById('pay-toll-btn');
-    if (tollBtn) tollBtn.addEventListener('click', payNexusToll);
+    const payBtn = document.getElementById('pay-service-btn');
+    if (payBtn) payBtn.addEventListener('click', payService);
+
+    // Service tab switching
+    document.querySelectorAll('.service-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.service-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+
+            const svc        = tab.dataset.service;
+            const extraWrap  = document.getElementById('svc-extra-wrap');
+            const extraInput = document.getElementById('svc-extra');
+            const btn        = document.getElementById('pay-service-btn');
+            const lamports   = SERVICE_LAMPORTS[svc] || 5_000_000;
+            btn.textContent  = `Pay ${lamports / 1_000_000_000} SOL`;
+
+            if (svc === 'reply') {
+                extraWrap.style.display = '';
+                extraInput.placeholder  = 'https://x.com/.../status/...';
+                extraInput.value        = '';
+            } else if (svc === 'verdict') {
+                extraWrap.style.display = '';
+                extraInput.placeholder  = 'Solana wallet address';
+                extraInput.value        = '';
+            } else {
+                extraWrap.style.display = 'none';
+                extraInput.value        = '';
+            }
+        });
+    });
 });
 
 // ==========================================
-// NEXUS TOLL — Web3 DApp payment
+// ON-CHAIN SERVICES — Web3 DApp payment
 // ==========================================
 const TREASURY_WALLET = "4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr";
-const MEMO_PROGRAM_ID  = "Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo"; // SPL Memo v1 — 43 chars, 32 bytes
-const TOLL_LAMPORTS    = 5_000_000; // 0.005 SOL
+const MEMO_PROGRAM_ID  = "Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo"; // SPL Memo v1
+
+const SERVICE_LAMPORTS = {
+    toll:    5_000_000,  // 0.005 SOL
+    genesis: 5_000_000,  // 0.005 SOL
+    reply:   10_000_000, // 0.01 SOL
+    verdict: 10_000_000, // 0.01 SOL
+};
+
+function _buildMemo(svcType, handle, extra) {
+    switch (svcType) {
+        case 'genesis': return `GENESIS ${handle}`;
+        case 'reply':   return `${handle} ${extra}`;
+        case 'verdict': return `VERDICT ${handle} ${extra}`;
+        default:        return handle; // toll
+    }
+}
 
 // RPC URL served dynamically from public.json (Helius key lives on VPS, never in git)
 let _rpcUrl = null;
@@ -221,10 +264,14 @@ function _detectWallet() {
     return null;
 }
 
-async function payNexusToll() {
-    const btn      = document.getElementById('pay-toll-btn');
-    const statusEl = document.getElementById('toll-status');
-    const handle   = document.getElementById('x-handle').value.trim();
+async function payService() {
+    const activeTab = document.querySelector('.service-tab.active');
+    const svcType   = activeTab ? activeTab.dataset.service : 'toll';
+    const btn       = document.getElementById('pay-service-btn');
+    const statusEl  = document.getElementById('svc-status');
+    const handle    = document.getElementById('svc-handle').value.trim();
+    const extraEl   = document.getElementById('svc-extra');
+    const extra     = extraEl ? extraEl.value.trim() : '';
 
     function setStatus(msg, color = 'var(--text-muted)') {
         statusEl.style.color = color;
@@ -233,6 +280,16 @@ async function payNexusToll() {
 
     if (!handle) {
         setStatus('Enter your X handle first.', '#ff3333');
+        return;
+    }
+    const h = handle.startsWith('@') ? handle : `@${handle}`;
+
+    if (svcType === 'reply' && !extra) {
+        setStatus('Enter the tweet URL.', '#ff3333');
+        return;
+    }
+    if (svcType === 'verdict' && !extra) {
+        setStatus('Enter the Solana wallet address.', '#ff3333');
         return;
     }
 
@@ -261,16 +318,19 @@ async function payNexusToll() {
         setStatus('Fetching blockhash...', 'var(--text-muted)');
         const blockhash = await _getBlockhash();
 
+        const lamports = SERVICE_LAMPORTS[svcType] || 5_000_000;
+        const memo     = _buildMemo(svcType, h, extra);
+
         const transferIx = solanaWeb3.SystemProgram.transfer({
             fromPubkey: sender,
             toPubkey:   new solanaWeb3.PublicKey(TREASURY_WALLET),
-            lamports:   TOLL_LAMPORTS,
+            lamports,
         });
 
         const memoIx = new solanaWeb3.TransactionInstruction({
             programId: new solanaWeb3.PublicKey(MEMO_PROGRAM_ID),
             keys:      [],
-            data:      new TextEncoder().encode(handle),
+            data:      new TextEncoder().encode(memo),
         });
 
         const tx = new solanaWeb3.Transaction();
@@ -282,8 +342,8 @@ async function payNexusToll() {
         const { signature } = await wallet.signAndSendTransaction(tx);
 
         const short = signature.slice(0, 8) + '...';
-        setStatus(`Toll received. Tx: ${short}`, 'var(--solana-green)');
-        console.log(`[0xeeAI] Nexus Toll paid — sig: ${signature}`);
+        setStatus(`Transaction confirmed. Tx: ${short}`, 'var(--solana-green)');
+        console.log(`[0xeeAI] Service payment — type=${svcType} memo="${memo}" sig=${signature}`);
 
     } catch (err) {
         if (err.code === 4001 || err.message?.includes('User rejected')) {
@@ -293,7 +353,7 @@ async function payNexusToll() {
         } else {
             const msg = err.message?.slice(0, 60) || 'Unknown error';
             setStatus(`Error: ${msg}`, '#ff3333');
-            console.error('[0xeeAI] Toll error:', err);
+            console.error('[0xeeAI] Service payment error:', err);
         }
     } finally {
         btn.disabled = false;

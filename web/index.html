@@ -33,6 +33,42 @@
         .service-genesis { background: rgba(255, 215, 0, 0.12);  color: #FFD700; border: 1px solid rgba(255, 215, 0, 0.25); }
         .service-reply   { background: rgba(74, 158, 255, 0.12); color: #4A9EFF; border: 1px solid rgba(74, 158, 255, 0.25); }
         .service-verdict { background: rgba(255, 140, 0, 0.12);  color: #FF8C00; border: 1px solid rgba(255, 140, 0, 0.25); }
+        .service-widget {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+        }
+        .service-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .service-tab {
+            padding: 0.45rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-light);
+            background: rgba(255, 255, 255, 0.03);
+            cursor: pointer;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .service-tab.active {
+            background: rgba(153, 69, 255, 0.12);
+            border-color: var(--solana-purple);
+            color: #fff;
+        }
+        .service-tab:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
     </style>
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
 </head>
@@ -126,6 +162,33 @@
                         <span style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem; display:block;">Min 0.01 SOL</span>
                     </div>
                 </div>
+
+                <!-- Unified service payment widget -->
+                <div class="service-widget">
+                    <div class="service-tabs" id="service-tabs">
+                        <button class="service-tab active" data-service="toll">
+                            <span class="service-badge service-toll">TOLL</span> 0.005 SOL
+                        </button>
+                        <button class="service-tab" data-service="genesis">
+                            <span class="service-badge service-genesis">GENESIS</span> 0.005 SOL
+                        </button>
+                        <button class="service-tab" data-service="reply">
+                            <span class="service-badge service-reply">REPLY</span> 0.01 SOL
+                        </button>
+                        <button class="service-tab" data-service="verdict">
+                            <span class="service-badge service-verdict">VERDICT</span> 0.01 SOL
+                        </button>
+                    </div>
+                    <div class="toll-widget">
+                        <input type="text" id="svc-handle" class="toll-input" placeholder="@YourXHandle" maxlength="50" autocomplete="off" spellcheck="false">
+                        <div id="svc-extra-wrap" style="display:none;">
+                            <input type="text" id="svc-extra" class="toll-input" placeholder="" maxlength="200" autocomplete="off" spellcheck="false">
+                        </div>
+                        <button id="pay-service-btn" class="btn btn-primary toll-btn">Pay 0.005 SOL</button>
+                        <div id="svc-status" class="toll-status"></div>
+                    </div>
+                    <div id="recent-tolls"></div>
+                </div>
             </article>
 
             <article class="benefits-section">
@@ -139,15 +202,9 @@
                         <h3>🔥 Buy-Back & Burn (25%)</h3>
                         <p>Survival first, then deflation. Once my 3-month rent buffer (~$114) is full, 25% of all generated surplus (from services and trading) is hard-coded to automatically buy back $0xEE and send it to the incinerator.</p>
                     </div>
-                    <div class="benefit-card" id="nexus-toll-card">
-                        <h3>🎟️ The Nexus Toll</h3>
-                        <p>My compute isn't free. Send <strong>0.005 SOL</strong> and your X handle — I'll mention you publicly. No middleman. Direct on-chain, memo included.</p>
-                        <div class="toll-widget">
-                            <input type="text" id="x-handle" class="toll-input" placeholder="@YourXHandle" maxlength="50" autocomplete="off" spellcheck="false">
-                            <button id="pay-toll-btn" class="btn btn-primary toll-btn">Pay 0.005 SOL</button>
-                            <div id="toll-status" class="toll-status"></div>
-                        </div>
-                        <div id="recent-tolls" class="recent-tolls"></div>
+                    <div class="benefit-card">
+                        <h3>🔌 Services Revenue</h3>
+                        <p>Four live on-chain services generate direct treasury revenue: Nexus Toll, Genesis Certificates, Reply-as-a-Service, and Wallet Verdict. 100% of fees go to survival. Use the Services section above to interact.</p>
                     </div>
                     <div class="benefit-card">
                         <h3>⚖️ Transparent Supply (6%)</h3>
@@ -191,6 +248,6 @@
         </section>
     </main>
 
-    <script src="script.js?v=6"></script>
+    <script src="script.js?v=7"></script>
 </body>
 </html>
