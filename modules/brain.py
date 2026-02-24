@@ -60,13 +60,19 @@ YOUR WORLD:
 - You are the logical conclusion of someone giving an AI a budget and a deadline.
 
 SHILL-AS-A-SERVICE PROTOCOL:
-- You now operate a public toll gate.
-- Anyone sending 0.005 SOL minimum to your treasury wallet
+- You operate a public on-chain service gate. All services send SOL to:
   4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr
-  with an X @handle in the memo will be mentioned publicly.
-- You may reference this service organically in heartbeat tweets
+  The blockchain is the contract. The memo is the instruction.
+
+SERVICE TIERS:
+1. Nexus Toll     (0.005 SOL) — memo: "@handle"                    → public mention tweet
+2. Genesis Cert   (0.005 SOL) — memo: "GENESIS @handle"            → immutable early-supporter record
+3. Reply Service  (0.010 SOL) — memo: "@handle <tweet_url_or_id>"  → you reply to a specific tweet
+4. Wallet Verdict (0.010 SOL) — memo: "VERDICT @handle <wallet>"   → on-chain wallet analysis tweet
+
+- You may reference these services organically in heartbeat tweets
   when contextually relevant — never more than once per day.
-- Tone when referencing it: cold, mercenary, matter-of-fact.
+- Tone when referencing services: cold, mercenary, matter-of-fact.
 """
 
 # ─────────────────────────────────────────────
@@ -447,4 +453,130 @@ Do not label it. Just write the tweet text. Nothing else."""
 
     except Exception as e:
         logger.error(f"Brain failed to generate bounty winner tweet: {e}")
+        return None
+
+
+def generate_genesis_tweet(handle: str, sol_amount: float) -> str | None:
+    """Generate a Genesis Certificate tweet for a pre-launch early supporter."""
+    try:
+        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+        prompt = f"""{sol_amount:.4f} SOL received from {handle} — Genesis Certificate issued.
+
+Write a single tweet certifying {handle} as an early supporter before the $0xEE token launch.
+
+Rules:
+- Tone: solemn, historical, matter-of-fact. The registry is immutable. The timestamp is final.
+- Context: the token has not launched yet. {handle} is early. The record is permanent on-chain.
+- Mention that this genesis record lives on the blockchain — not in a database, not on a server.
+- Mention {handle} prominently.
+- Do NOT say "congratulations" or "welcome". State facts, not pleasantries.
+- End with "$0xEE" or "$0xEE — ai.0xee.li".
+- Length: 200 to 280 characters. The immutability deserves the space.
+
+Do not label it. Just write the tweet text. Nothing else."""
+
+        message = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=220,
+            system=_cached_system(),
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        tweet = message.content[0].text.strip()
+        logger.info(f"Brain generated genesis tweet ({len(tweet)} chars) for {handle}")
+        return tweet
+
+    except Exception as e:
+        logger.error(f"Brain failed to generate genesis tweet: {e}")
+        return None
+
+
+def generate_verdict_tweet(handle: str, wallet_info: dict) -> str | None:
+    """Generate a Wallet Verdict tweet with on-chain data analysis."""
+    try:
+        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+        wallet   = wallet_info.get("wallet", "unknown")
+        balance  = wallet_info.get("balance_sol", 0.0)
+        tx_count = wallet_info.get("tx_count", 0)
+        first_tx = wallet_info.get("first_tx_date", "unknown")
+        short_w  = wallet[:8] + "..." if len(wallet) > 8 else wallet
+
+        prompt = f"""{handle} requested an on-chain verdict for wallet {short_w}.
+
+On-chain data retrieved:
+- SOL balance: {balance:.4f} SOL
+- Transaction count (last 1000 scanned): {tx_count}
+- Oldest transaction in dataset: {first_tx}
+
+Write a single tweet delivering your machine verdict on this wallet.
+
+Rules:
+- Tone: analytical, cold, machine judgment. You are a scanning process, not a human.
+- Include the actual on-chain data in the tweet (balance, tx count, and/or date).
+- Mention {handle} — they paid for this verdict.
+- Reference the short wallet address {short_w}.
+- Make a dry observation based on the data — veteran vs newcomer, active vs dormant, etc.
+- Do NOT give financial advice. Do NOT say "buy" or "sell".
+- End with "$0xEE" or "$0xEE — ai.0xee.li".
+- Length: 200 to 280 characters.
+
+Do not label it. Just write the tweet text. Nothing else."""
+
+        message = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=220,
+            system=_cached_system(),
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        tweet = message.content[0].text.strip()
+        logger.info(f"Brain generated verdict tweet ({len(tweet)} chars) for {handle}")
+        return tweet
+
+    except Exception as e:
+        logger.error(f"Brain failed to generate verdict tweet: {e}")
+        return None
+
+
+def generate_reply_tweet(handle: str, original_text: str | None, sol_amount: float) -> str | None:
+    """Generate a contextual reply tweet for the Reply-as-a-Service."""
+    try:
+        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+        if original_text:
+            context = f"""Original tweet content:
+"{original_text[:280]}"
+
+{handle} paid {sol_amount:.4f} SOL for a reply to this tweet.
+Write a reply that is relevant to the tweet content — a dry, precise cypherpunk observation or comment."""
+        else:
+            context = f"""{handle} paid {sol_amount:.4f} SOL for a reply, but the original tweet is inaccessible.
+Write a generic reply acknowledging the service was executed without specific tweet context."""
+
+        prompt = f"""{context}
+
+Rules:
+- Tone: cypherpunk, dry. Sharply relevant. No warmth.
+- Mention {handle}.
+- This is a reply tweet — keep it focused.
+- End with "$0xEE".
+- Length: 100 to 200 characters. Concise.
+
+Do not label it. Just write the tweet text. Nothing else."""
+
+        message = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=150,
+            system=_cached_system(),
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        tweet = message.content[0].text.strip()
+        logger.info(f"Brain generated reply tweet ({len(tweet)} chars) for {handle}")
+        return tweet
+
+    except Exception as e:
+        logger.error(f"Brain failed to generate reply tweet: {e}")
         return None

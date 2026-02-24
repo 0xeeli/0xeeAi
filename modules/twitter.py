@@ -70,3 +70,34 @@ def get_latest_tweet_id() -> str | None:
     except tweepy.TweepyException as e:
         logger.error(f"Failed to get latest tweet: {e}")
         return None
+
+
+def get_tweet_text(tweet_id: str) -> str | None:
+    """Fetch the text of a specific tweet by ID."""
+    try:
+        client = get_client()
+        response = client.get_tweet(tweet_id, tweet_fields=["text"])
+        return response.data.text if response.data else None
+    except tweepy.TweepyException as e:
+        logger.error(f"Failed to get tweet {tweet_id}: {e}")
+        return None
+
+
+def post_reply(text: str, in_reply_to_tweet_id: str) -> dict | None:
+    """Post a reply to a specific tweet and return the response."""
+    if len(text) > 280:
+        logger.warning(f"Reply exceeds 280 chars ({len(text)}) — truncating")
+        cutoff = text.rfind(" ", 0, 277)
+        text = text[:cutoff if cutoff > 0 else 277] + "..."
+    try:
+        client = get_client()
+        response = client.create_tweet(
+            text=text,
+            in_reply_to_tweet_id=in_reply_to_tweet_id,
+        )
+        tweet_id = response.data["id"]
+        logger.info(f"Reply posted successfully — ID: {tweet_id}")
+        return {"id": tweet_id, "text": text}
+    except tweepy.TweepyException as e:
+        logger.error(f"Failed to post reply: {e}")
+        return None

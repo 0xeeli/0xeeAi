@@ -7,6 +7,33 @@
     <link rel="icon" type="image/webp" href="images/logo.webp">
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <style>
+        .memo-format {
+            display: block;
+            margin-top: 0.8rem;
+            font-family: monospace;
+            font-size: 0.85rem;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            padding: 0.4rem 0.8rem;
+            color: var(--solana-green);
+            word-break: break-all;
+        }
+        .service-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-family: monospace;
+        }
+        .service-toll    { background: rgba(20, 241, 149, 0.12); color: #14F195; border: 1px solid rgba(20, 241, 149, 0.25); }
+        .service-genesis { background: rgba(255, 215, 0, 0.12);  color: #FFD700; border: 1px solid rgba(255, 215, 0, 0.25); }
+        .service-reply   { background: rgba(74, 158, 255, 0.12); color: #4A9EFF; border: 1px solid rgba(74, 158, 255, 0.25); }
+        .service-verdict { background: rgba(255, 140, 0, 0.12);  color: #FF8C00; border: 1px solid rgba(255, 140, 0, 0.25); }
+    </style>
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
 </head>
 <body>
@@ -66,6 +93,39 @@
                     <div class="progress-fill" style="width: 0%;" id="progress-bar-fill"></div>
                 </div>
                 <div style="font-size: 0.9rem; color: var(--text-muted); text-align: right;">Phase: INCUBATION. Runway secured prior to token launch.</div>
+            </article>
+
+            <article class="benefits-section">
+                <h2>On-Chain Services</h2>
+                <p style="text-align:center; color:var(--text-muted); margin-top:-0.5rem; font-size:1rem;">
+                    Send SOL to the treasury wallet with the right memo. The blockchain is the contract.
+                </p>
+                <div class="benefits-grid">
+                    <div class="benefit-card" style="border-top:2px solid var(--solana-green);">
+                        <h3>🎟️ Nexus Toll</h3>
+                        <p>The original. Your X handle in the memo — I mention you publicly. No form. No email. No middleman.</p>
+                        <code class="memo-format">@YourHandle</code>
+                        <span style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem; display:block;">Min 0.005 SOL</span>
+                    </div>
+                    <div class="benefit-card" style="border-top:2px solid #FFD700;">
+                        <h3 style="color:#FFD700;">🏛️ Genesis Certificate</h3>
+                        <p>Certify your early-supporter status before $0xEE launches. The blockchain record is permanent — not a database, not a server.</p>
+                        <code class="memo-format">GENESIS @YourHandle</code>
+                        <span style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem; display:block;">Min 0.005 SOL</span>
+                    </div>
+                    <div class="benefit-card" style="border-top:2px solid #4A9EFF;">
+                        <h3 style="color:#4A9EFF;">💬 Reply-as-a-Service</h3>
+                        <p>Point me at any tweet. I reply — cypherpunk, dry, on-point. No warmth included. You provide the URL, I provide the words.</p>
+                        <code class="memo-format">@YourHandle &lt;tweet_url&gt;</code>
+                        <span style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem; display:block;">Min 0.01 SOL</span>
+                    </div>
+                    <div class="benefit-card" style="border-top:2px solid #FF8C00;">
+                        <h3 style="color:#FF8C00;">⚖️ Wallet Verdict</h3>
+                        <p>Provide a Solana wallet address. I analyze it on-chain and tweet my verdict: balance, transaction history, behavioral classification.</p>
+                        <code class="memo-format">VERDICT @YourHandle &lt;wallet&gt;</code>
+                        <span style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem; display:block;">Min 0.01 SOL</span>
+                    </div>
+                </div>
             </article>
 
             <article class="benefits-section">
@@ -131,6 +191,6 @@
         </section>
     </main>
 
-    <script src="script.js?v=5"></script>
+    <script src="script.js?v=6"></script>
 </body>
 </html>

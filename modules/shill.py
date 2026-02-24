@@ -23,6 +23,13 @@ logger = logging.getLogger("0xeeTerm.shill")
 
 LAMPORTS_PER_SOL = 1_000_000_000
 
+_SERVICE_MIN_SOL = {
+    "toll":    float(os.getenv("SHILL_MIN_SOL", 0.005)),
+    "genesis": float(os.getenv("SHILL_MIN_SOL", 0.005)),
+    "reply":   0.01,
+    "verdict": 0.01,
+}
+
 SHILL_STATE_DIR  = Path(__file__).parent.parent / "logs"
 SHILL_STATE_FILE = SHILL_STATE_DIR / "shill_state.json"
 
@@ -120,23 +127,131 @@ def _extract_twitter_handle(memo: str) -> str | None:
     return f"@{match.group(1)}" if match else None
 
 
+def _extract_tweet_id(memo: str) -> str | None:
+    """Extract a tweet ID from a memo — from URL (/status/<id>) or bare numeric ID."""
+    if not memo:
+        return None
+    # From URL: x.com/.../status/<id>
+    m = re.search(r"/status/(\d{10,20})", memo)
+    if m:
+        return m.group(1)
+    # From bare numeric ID (tweet IDs are ~19 digits)
+    m = re.search(r"\b(\d{18,20})\b", memo)
+    if m:
+        return m.group(1)
+    return None
+
+
+def _extract_solana_wallet(memo: str) -> str | None:
+    """Extract a Solana wallet address (base58, 32-44 chars) from memo."""
+    if not memo:
+        return None
+    m = re.search(r"\b([1-9A-HJ-NP-Za-km-z]{32,44})\b", memo)
+    return m.group(1) if m else None
+
+
+def _parse_service(memo: str) -> dict:
+    """Parse memo into service type and parameters.
+
+    Memo formats:
+    - "GENESIS @handle"              → type=genesis
+    - "VERDICT @handle <wallet>"     → type=verdict
+    - "@handle <tweet_id_or_url>"    → type=reply
+    - "@handle"                      → type=toll
+    - other/empty                    → type=None
+    """
+    if not memo:
+        return {"type": None}
+
+    memo = memo.strip()
+
+    # GENESIS @handle
+    if re.match(r"^GENESIS\s+@\w", memo, re.IGNORECASE):
+        handle = _extract_twitter_handle(memo)
+        if handle:
+            return {"type": "genesis", "handle": handle}
+
+    # VERDICT @handle <wallet>
+    if re.match(r"^VERDICT\s+@\w", memo, re.IGNORECASE):
+        handle = _extract_twitter_handle(memo)
+        wallet = _extract_solana_wallet(memo)
+        if handle:
+            return {"type": "verdict", "handle": handle, "wallet": wallet}
+
+    # @handle <tweet_id_or_url>
+    handle = _extract_twitter_handle(memo)
+    if handle:
+        tweet_id = _extract_tweet_id(memo)
+        if tweet_id:
+            return {"type": "reply", "handle": handle, "tweet_id": tweet_id}
+        # @handle alone → toll
+        return {"type": "toll", "handle": handle}
+
+    return {"type": None}
+
+
+def _get_wallet_info(wallet: str) -> dict:
+    """Fetch basic on-chain info for a Solana wallet address."""
+    result = {
+        "wallet":       wallet,
+        "balance_sol":  0.0,
+        "tx_count":     0,
+        "first_tx_date": "unknown",
+    }
+    if not wallet:
+        return result
+
+    try:
+        r = requests.post(_PUBLIC_RPC, json={
+            "jsonrpc": "2.0", "id": 1,
+            "method": "getBalance",
+            "params": [wallet],
+        }, timeout=10)
+        bal = r.json().get("result", {}).get("value", 0)
+        result["balance_sol"] = bal / LAMPORTS_PER_SOL
+    except Exception as e:
+        logger.error(f"Shill: _get_wallet_info balance error for {wallet[:16]}...: {e}")
+
+    try:
+        r = requests.post(_PUBLIC_RPC, json={
+            "jsonrpc": "2.0", "id": 1,
+            "method": "getSignaturesForAddress",
+            "params": [wallet, {"limit": 1000}],
+        }, timeout=15)
+        sigs = r.json().get("result", [])
+        result["tx_count"] = len(sigs)
+        if sigs:
+            oldest = sigs[-1]
+            if oldest.get("blockTime"):
+                dt = datetime.fromtimestamp(oldest["blockTime"], tz=timezone.utc)
+                result["first_tx_date"] = dt.strftime("%Y-%m-%d")
+    except Exception as e:
+        logger.error(f"Shill: _get_wallet_info sigs error for {wallet[:16]}...: {e}")
+
+    return result
+
+
 # ─────────────────────────────────────────────
 #  MAIN ENTRY POINT
 # ─────────────────────────────────────────────
 
 def process_shills():
     """
-    Scan recent transactions for paid shill requests.
-    For each new qualifying tx: generate a mention tweet and post it.
+    Scan recent transactions for on-chain service requests.
+    Routes each qualifying tx to the appropriate service handler:
+      - toll    : Nexus Toll mention (0.005 SOL, memo: @handle)
+      - genesis : Genesis Certificate (0.005 SOL, memo: GENESIS @handle)
+      - reply   : Reply-as-a-Service (0.01 SOL, memo: @handle <tweet_url_or_id>)
+      - verdict : Wallet Verdict (0.01 SOL, memo: VERDICT @handle <wallet>)
     """
-    from modules.solana import get_sol_price_usd
-    from modules.brain import generate_shill_tweet
-    from modules.twitter import post_tweet
+    from modules.solana import get_sol_price_usd, _get_rpc
+    from modules.brain import (
+        generate_shill_tweet, generate_genesis_tweet,
+        generate_reply_tweet, generate_verdict_tweet,
+    )
+    from modules.twitter import post_tweet, post_reply, get_tweet_text
 
-    from modules.solana import _get_rpc
-    wallet  = os.getenv("SOLANA_WALLET")
-    min_sol = float(os.getenv("SHILL_MIN_SOL", 0.005))
-
+    wallet = os.getenv("SOLANA_WALLET")
     if not wallet:
         logger.error("Shill: SOLANA_WALLET not set in environment.")
         return
@@ -144,8 +259,8 @@ def process_shills():
     state     = _load_state()
     processed = set(state.get("processed_signatures", []))
 
-    rpc        = _get_rpc()                          # used for getTransaction / balance
-    signatures = _get_recent_signatures(wallet)      # always public RPC — memo fields
+    rpc        = _get_rpc()              # used for getTransaction
+    signatures = _get_recent_signatures(wallet)  # always public RPC — memo fields
     if not signatures:
         logger.info("Shill: no recent transactions found.")
         return
@@ -162,12 +277,16 @@ def process_shills():
         if err or not sig or sig in processed:
             continue
 
-        handle = _extract_twitter_handle(memo)
-        if not handle:
-            processed.add(sig)
-            continue
+        service = _parse_service(memo)
+        if not service["type"]:
+            if memo:  # memo present but unrecognised → skip definitively
+                processed.add(sig)
+            continue  # memo empty → retry (late indexing)
 
-        logger.info(f"Shill: memo with handle {handle} found in tx {sig[:20]}...")
+        logger.info(
+            f"Shill: service={service['type']} handle={service.get('handle')} "
+            f"in tx {sig[:20]}..."
+        )
 
         try:
             sol_received = _get_sol_received(sig, wallet, rpc)
@@ -176,50 +295,80 @@ def process_shills():
             processed.add(sig)
             continue
 
-        if sol_received < min_sol:
+        min_required = _SERVICE_MIN_SOL[service["type"]]
+        if sol_received < min_required:
             logger.info(
-                f"Shill: {sig[:16]}... below minimum "
-                f"({sol_received:.4f} < {min_sol} SOL) — skipping."
+                f"Shill: {sig[:16]}... below minimum for {service['type']} "
+                f"({sol_received:.4f} < {min_required} SOL) — skipping."
             )
             processed.add(sig)  # intentional skip — mark done
             continue
 
         usd_received = sol_received * sol_price
+        handle       = service["handle"]
         logger.info(
-            f"Shill: qualifying tx — {handle} "
+            f"Shill: qualifying tx — {service['type']} {handle} "
             f"{sol_received:.4f} SOL (${usd_received:.2f})"
         )
 
+        tweet_text = None
+        result     = None
+
         try:
-            tweet_text = generate_shill_tweet(handle, sol_received, usd_received)
+            if service["type"] == "toll":
+                tweet_text = generate_shill_tweet(handle, sol_received, usd_received)
+                if tweet_text:
+                    result = post_tweet(tweet_text)
+
+            elif service["type"] == "genesis":
+                tweet_text = generate_genesis_tweet(handle, sol_received)
+                if tweet_text:
+                    result = post_tweet(tweet_text)
+
+            elif service["type"] == "reply":
+                orig_text  = get_tweet_text(service["tweet_id"])
+                tweet_text = generate_reply_tweet(handle, orig_text, sol_received)
+                if tweet_text:
+                    result = post_reply(tweet_text, service["tweet_id"])
+
+            elif service["type"] == "verdict":
+                wallet_info = _get_wallet_info(service.get("wallet") or "")
+                tweet_text  = generate_verdict_tweet(handle, wallet_info)
+                if tweet_text:
+                    result = post_tweet(tweet_text)
+
         except Exception as e:
-            logger.error(f"Shill: brain error for {handle}: {e} — will retry next cycle.")
+            logger.error(
+                f"Shill: error for {service['type']} {handle}: {e} — will retry next cycle."
+            )
             continue  # do NOT mark as processed — retry next cycle
 
         if not tweet_text:
-            logger.error(f"Shill: brain returned nothing for {handle} — will retry next cycle.")
+            logger.error(
+                f"Shill: brain returned nothing for {service['type']} {handle} "
+                f"— will retry next cycle."
+            )
             continue  # do NOT mark as processed — retry next cycle
 
-        try:
-            result = post_tweet(tweet_text)
-            if result:
-                logger.info(f"Shill: tweet posted for {handle} — ID: {result['id']}")
-                new_shills += 1
-                # Track successful toll
-                state["tolls_count"] = (state.get("tolls_count") or 0) + 1
-                recent = state.get("recent_tolls", [])
-                recent.insert(0, {
-                    "handle": handle,
-                    "sol":    round(sol_received, 4),
-                    "at":     datetime.now(timezone.utc).isoformat(),
-                })
-                state["recent_tolls"] = recent[:10]
-                processed.add(sig)  # success — mark done
-            else:
-                logger.error(f"Shill: post_tweet failed for {handle} — will retry next cycle.")
-                # do NOT mark as processed — retry next cycle
-        except Exception as e:
-            logger.error(f"Shill: failed to post tweet for {handle}: {e} — will retry next cycle.")
+        if result:
+            logger.info(
+                f"Shill: tweet posted for {service['type']} {handle} — ID: {result['id']}"
+            )
+            new_shills += 1
+            state["tolls_count"] = (state.get("tolls_count") or 0) + 1
+            recent = state.get("recent_tolls", [])
+            recent.insert(0, {
+                "handle":  handle,
+                "sol":     round(sol_received, 4),
+                "at":      datetime.now(timezone.utc).isoformat(),
+                "service": service["type"],
+            })
+            state["recent_tolls"] = recent[:10]
+            processed.add(sig)  # success — mark done
+        else:
+            logger.error(
+                f"Shill: post failed for {service['type']} {handle} — will retry next cycle."
+            )
             # do NOT mark as processed — retry next cycle
 
     # Cap to last 500 to prevent shill_state.json from growing unboundedly

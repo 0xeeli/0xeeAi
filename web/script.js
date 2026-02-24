@@ -49,16 +49,31 @@ async function syncWithMatrix() {
             label.style.cssText = 'font-size:0.78rem; color:var(--text-muted); margin-top:1rem; margin-bottom:0.4rem; text-transform:uppercase; letter-spacing:1px;';
             label.textContent = 'Recent mentions';
             recentTollsEl.appendChild(label);
+            const VALID_SERVICES = ['toll', 'genesis', 'reply', 'verdict'];
             data.tolls.recent.slice(0, 5).forEach(toll => {
                 const row = document.createElement('div');
                 row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:0.25rem 0; border-bottom:1px solid var(--border-light); font-size:0.88rem;';
+
+                const left = document.createElement('span');
+                left.style.cssText = 'display:flex; align-items:center; gap:0.4rem;';
+
+                const svcRaw = (toll.service || 'toll').toLowerCase();
+                const svcType = VALID_SERVICES.includes(svcRaw) ? svcRaw : 'toll';
+                const badge = document.createElement('span');
+                badge.className = `service-badge service-${svcType}`;
+                badge.textContent = svcType.toUpperCase();
+
                 const handle = document.createElement('span');
                 handle.style.color = 'var(--solana-green)';
                 handle.textContent = toll.handle;
+
+                left.appendChild(badge);
+                left.appendChild(handle);
+
                 const amt = document.createElement('span');
                 amt.style.color = 'var(--text-muted)';
                 amt.textContent = `${toll.sol} SOL`;
-                row.appendChild(handle);
+                row.appendChild(left);
                 row.appendChild(amt);
                 recentTollsEl.appendChild(row);
             });
