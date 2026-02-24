@@ -166,16 +166,16 @@
                 <!-- Unified service payment widget -->
                 <div class="service-widget">
                     <div class="service-tabs" id="service-tabs">
-                        <button class="service-tab active" data-service="toll">
+                        <button type="button" class="service-tab active" data-service="toll">
                             <span class="service-badge service-toll">TOLL</span> 0.005 SOL
                         </button>
-                        <button class="service-tab" data-service="genesis">
+                        <button type="button" class="service-tab" data-service="genesis">
                             <span class="service-badge service-genesis">GENESIS</span> 0.005 SOL
                         </button>
-                        <button class="service-tab" data-service="reply">
+                        <button type="button" class="service-tab" data-service="reply">
                             <span class="service-badge service-reply">REPLY</span> 0.01 SOL
                         </button>
-                        <button class="service-tab" data-service="verdict">
+                        <button type="button" class="service-tab" data-service="verdict">
                             <span class="service-badge service-verdict">VERDICT</span> 0.01 SOL
                         </button>
                     </div>
@@ -184,6 +184,7 @@
                         <div id="svc-extra-wrap" style="display:none;">
                             <input type="text" id="svc-extra" class="toll-input" placeholder="" maxlength="200" autocomplete="off" spellcheck="false">
                         </div>
+                        <div id="memo-preview" style="font-family:monospace; font-size:0.8rem; color:var(--text-muted); padding:0.35rem 0.8rem; background:rgba(0,0,0,0.3); border-radius:6px; word-break:break-all;">Memo: @YourHandle</div>
                         <button id="pay-service-btn" class="btn btn-primary toll-btn">Pay 0.005 SOL</button>
                         <div id="svc-status" class="toll-status"></div>
                     </div>
@@ -249,6 +250,6 @@
         </section>
     </main>
 
-    <script src="script.js?v=8"></script>
+    <script src="script.js?v=9"></script>
 </body>
 </html>

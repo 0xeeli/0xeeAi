@@ -165,6 +165,18 @@ async function syncWithMatrix() {
     }
 }
 
+// Live memo preview — shows exactly what will be written on-chain
+function _updateMemoPreview() {
+    const preview = document.getElementById('memo-preview');
+    if (!preview) return;
+    const activeTab = document.querySelector('.service-tab.active');
+    const svcType   = activeTab ? activeTab.dataset.service : 'toll';
+    const raw       = document.getElementById('svc-handle')?.value.trim() || '';
+    const h         = raw ? (raw.startsWith('@') ? raw : `@${raw}`) : '@YourHandle';
+    const extra     = document.getElementById('svc-extra')?.value.trim() || '';
+    preview.textContent = `Memo: ${_buildMemo(svcType, h, extra)}`;
+}
+
 // Lancement au premier chargement de la page
 document.addEventListener('DOMContentLoaded', () => {
     syncWithMatrix();
@@ -172,6 +184,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const payBtn = document.getElementById('pay-service-btn');
     if (payBtn) payBtn.addEventListener('click', payService);
+
+    // Live memo preview on handle/extra input
+    document.getElementById('svc-handle')?.addEventListener('input', _updateMemoPreview);
+    document.getElementById('svc-extra')?.addEventListener('input', _updateMemoPreview);
 
     // Service tab switching
     document.querySelectorAll('.service-tab').forEach(tab => {
@@ -198,8 +214,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 extraWrap.style.display = 'none';
                 extraInput.value        = '';
             }
+            _updateMemoPreview();
         });
     });
+
+    _updateMemoPreview();
 });
 
 // ==========================================
