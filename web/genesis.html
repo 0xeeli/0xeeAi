@@ -174,7 +174,15 @@
 
                     const handleTd = document.createElement('td');
                     handleTd.className = 'cell-handle';
-                    handleTd.textContent = holder.handle;
+                    const handleLink = document.createElement('a');
+                    handleLink.textContent = holder.handle;
+                    handleLink.href = `https://x.com/${holder.handle.replace(/^@/, '')}`;
+                    handleLink.target = '_blank';
+                    handleLink.rel = 'noopener noreferrer';
+                    handleLink.style.cssText = 'color:var(--solana-green); text-decoration:none;';
+                    handleLink.addEventListener('mouseover', () => handleLink.style.textDecoration = 'underline');
+                    handleLink.addEventListener('mouseout',  () => handleLink.style.textDecoration = 'none');
+                    handleTd.appendChild(handleLink);
 
                     const solTd = document.createElement('td');
                     solTd.className = 'cell-sol';
