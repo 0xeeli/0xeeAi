@@ -30,8 +30,9 @@ _SERVICE_MIN_SOL = {
     "verdict": 0.01,
 }
 
-SHILL_STATE_DIR  = Path(__file__).parent.parent / "logs"
-SHILL_STATE_FILE = SHILL_STATE_DIR / "shill_state.json"
+SHILL_STATE_DIR      = Path(__file__).parent.parent / "logs"
+SHILL_STATE_FILE     = SHILL_STATE_DIR / "shill_state.json"
+GENESIS_REGISTRY_FILE = SHILL_STATE_DIR / "genesis_registry.json"
 
 
 # ─────────────────────────────────────────────
@@ -55,6 +56,31 @@ def _save_state(state: dict):
             json.dump(state, f, indent=2)
     except Exception as e:
         logger.error(f"Shill: failed to save state: {e}")
+
+
+def _load_genesis_registry() -> list:
+    if GENESIS_REGISTRY_FILE.exists():
+        try:
+            with open(GENESIS_REGISTRY_FILE) as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"Shill: failed to load genesis registry: {e}")
+    return []
+
+
+def _append_genesis_entry(handle: str, sol: float, tx_sig: str, at: str):
+    """Append a new entry to the genesis registry (deduped by tx_sig)."""
+    registry = _load_genesis_registry()
+    if any(e.get("tx_sig") == tx_sig for e in registry):
+        return
+    registry.append({"handle": handle, "sol": round(sol, 4), "tx_sig": tx_sig, "at": at})
+    try:
+        SHILL_STATE_DIR.mkdir(parents=True, exist_ok=True)
+        with open(GENESIS_REGISTRY_FILE, "w") as f:
+            json.dump(registry, f, indent=2)
+        logger.info(f"Shill: genesis entry saved — {handle} (#{len(registry)})")
+    except Exception as e:
+        logger.error(f"Shill: failed to save genesis registry: {e}")
 
 
 # ─────────────────────────────────────────────
@@ -355,15 +381,19 @@ def process_shills():
                 f"Shill: tweet posted for {service['type']} {handle} — ID: {result['id']}"
             )
             new_shills += 1
+            now_iso = datetime.now(timezone.utc).isoformat()
             state["tolls_count"] = (state.get("tolls_count") or 0) + 1
             recent = state.get("recent_tolls", [])
             recent.insert(0, {
                 "handle":  handle,
                 "sol":     round(sol_received, 4),
-                "at":      datetime.now(timezone.utc).isoformat(),
+                "at":      now_iso,
                 "service": service["type"],
             })
             state["recent_tolls"] = recent[:10]
+            # Genesis: persist to registry
+            if service["type"] == "genesis":
+                _append_genesis_entry(handle, sol_received, sig, now_iso)
             processed.add(sig)  # success — mark done
         else:
             logger.error(

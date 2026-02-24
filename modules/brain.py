@@ -480,10 +480,9 @@ Write a single tweet certifying {handle} as an early supporter before the $0xEE 
 Rules:
 - Tone: solemn, historical, matter-of-fact. The registry is immutable. The timestamp is final.
 - Context: the token has not launched yet. {handle} is early. The record is permanent on-chain.
-- Mention that this genesis record lives on the blockchain — not in a database, not on a server.
-- Mention {handle} prominently.
+- Mention that {handle} is now listed on the public Genesis Registry at ai.0xee.li/genesis.html
 - Do NOT say "congratulations" or "welcome". State facts, not pleasantries.
-- End with "$0xEE" or "$0xEE — ai.0xee.li".
+- End with "$0xEE".
 - Length: 200 to 280 characters. The immutability deserves the space.
 
 Do not label it. Just write the tweet text. Nothing else."""

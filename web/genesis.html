@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>0xeeAI | Genesis Registry</title>
+    <link rel="icon" type="image/webp" href="images/logo.webp">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .genesis-badge {
+            display: inline-block;
+            background: rgba(255, 215, 0, 0.12);
+            color: #FFD700;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 6px;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            font-family: monospace;
+        }
+        .genesis-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        .genesis-table th {
+            text-align: left;
+            padding: 0.6rem 1rem;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            border-bottom: 1px solid var(--border-light);
+            font-weight: 500;
+        }
+        .genesis-table td {
+            padding: 0.8rem 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            font-size: 0.95rem;
+        }
+        .genesis-table tbody tr:hover td {
+            background: rgba(255, 215, 0, 0.02);
+        }
+        .cell-rank   { color: var(--text-muted); font-family: monospace; font-size: 0.85rem; width: 3rem; }
+        .cell-handle { color: var(--solana-green); font-weight: 500; }
+        .cell-sol    { color: var(--text-muted); font-family: monospace; font-size: 0.85rem; }
+        .cell-date   { color: var(--text-muted); font-family: monospace; font-size: 0.85rem; }
+        .empty-state {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 3rem 1rem;
+            font-size: 1rem;
+            border: 1px dashed var(--border-light);
+            border-radius: 12px;
+        }
+        @media (max-width: 768px) {
+            .genesis-table th:last-child,
+            .genesis-table td:last-child { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <main class="dashboard">
+        <header class="terminal-header">
+            <span class="status-dot"></span>
+            <span>SYSTEM_0xeeAI // GENESIS_REGISTRY // PRE-LAUNCH</span>
+        </header>
+
+        <section class="glass-panel">
+            <article class="hero-section" style="text-align: center;">
+                <div style="margin-bottom: 1rem;">
+                    <span class="genesis-badge">GENESIS</span>
+                </div>
+                <h1 style="font-size: clamp(2rem, 5vw, 3.5rem); margin-bottom: 1rem;">
+                    Early Supporter Registry
+                </h1>
+                <p class="pitch" style="font-size: 1.1rem; max-width: 620px; margin: 0 auto;">
+                    The immutable list of those who supported 0xeeAI before the $0xEE token launch.
+                    Each entry is a Solana transaction — timestamped, public, permanent.
+                    The blockchain does not lie.
+                </p>
+            </article>
+
+            <article class="stats-grid" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="stat-card" style="border-top: 2px solid #FFD700;">
+                    <span class="stat-label">Genesis Certificates</span>
+                    <span class="stat-value" style="color: #FFD700;" id="genesis-count">—</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Phase</span>
+                    <span class="stat-value" style="font-size: 1.5rem; color: var(--text-muted);">PRE-LAUNCH</span>
+                </div>
+            </article>
+
+            <article>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <h2 style="font-size: 1.3rem; color: #fff; font-weight: 700;">Registry</h2>
+                    <span style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;" id="updated-at"></span>
+                </div>
+                <div id="genesis-list">
+                    <div class="empty-state">Loading registry...</div>
+                </div>
+            </article>
+
+            <aside class="highlight-box" style="border-left-color: #FFD700;">
+                <strong style="color: #FFD700;">How to get a Genesis Certificate:</strong>
+                Send <strong>0.005 SOL</strong> to
+                <code style="font-family: monospace; font-size: 0.9rem; color: var(--solana-green);">4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr</code>
+                with memo <code style="font-family: monospace; color: #FFD700;">GENESIS @YourHandle</code>
+                — or use the DApp on the main page. Your entry is permanent.
+            </aside>
+
+            <nav class="action-links">
+                <a href="index.html" class="btn btn-secondary">← Dashboard</a>
+                <a href="https://x.com/0xeeAi" target="_blank" class="btn btn-secondary">Track @0xeeAi</a>
+                <a href="log.html" class="btn btn-secondary">System Logs</a>
+            </nav>
+        </section>
+    </main>
+
+    <script>
+        async function loadGenesis() {
+            try {
+                const res = await fetch(`public.json?t=${Date.now()}`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+
+                const genesis  = data.genesis || { count: 0, holders: [] };
+                const countEl  = document.getElementById('genesis-count');
+                const listEl   = document.getElementById('genesis-list');
+                const updEl    = document.getElementById('updated-at');
+
+                countEl.textContent = genesis.count || 0;
+                if (data.updated_at) {
+                    updEl.textContent = 'Updated ' + data.updated_at.slice(0, 16).replace('T', ' ') + ' UTC';
+                }
+
+                listEl.innerHTML = '';
+
+                if (!genesis.holders || genesis.holders.length === 0) {
+                    const empty = document.createElement('div');
+                    empty.className = 'empty-state';
+                    empty.textContent = 'No genesis certificates issued yet. Be the first.';
+                    listEl.appendChild(empty);
+                    return;
+                }
+
+                // Build table — all user content via textContent (XSS-safe)
+                const table = document.createElement('table');
+                table.className = 'genesis-table';
+
+                const thead = document.createElement('thead');
+                const headerRow = document.createElement('tr');
+                ['#', 'Handle', 'SOL', 'Date'].forEach(col => {
+                    const th = document.createElement('th');
+                    th.textContent = col;
+                    headerRow.appendChild(th);
+                });
+                thead.appendChild(headerRow);
+                table.appendChild(thead);
+
+                // Sorted chronologically — oldest = rank #1 (most prestigious)
+                const tbody = document.createElement('tbody');
+                const sorted = [...genesis.holders].sort((a, b) => new Date(a.at) - new Date(b.at));
+                sorted.forEach((holder, i) => {
+                    const tr = document.createElement('tr');
+
+                    const rankTd = document.createElement('td');
+                    rankTd.className = 'cell-rank';
+                    rankTd.textContent = `#${i + 1}`;
+
+                    const handleTd = document.createElement('td');
+                    handleTd.className = 'cell-handle';
+                    handleTd.textContent = holder.handle;
+
+                    const solTd = document.createElement('td');
+                    solTd.className = 'cell-sol';
+                    solTd.textContent = `${holder.sol} SOL`;
+
+                    const dateTd = document.createElement('td');
+                    dateTd.className = 'cell-date';
+                    dateTd.textContent = holder.at ? holder.at.slice(0, 10) : '—';
+
+                    tr.appendChild(rankTd);
+                    tr.appendChild(handleTd);
+                    tr.appendChild(solTd);
+                    tr.appendChild(dateTd);
+                    tbody.appendChild(tr);
+                });
+                table.appendChild(tbody);
+                listEl.appendChild(table);
+
+            } catch (e) {
+                const listEl = document.getElementById('genesis-list');
+                if (listEl) {
+                    listEl.innerHTML = '';
+                    const empty = document.createElement('div');
+                    empty.className = 'empty-state';
+                    empty.textContent = '— BACKEND OFFLINE — data unavailable —';
+                    listEl.appendChild(empty);
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadGenesis();
+            setInterval(loadGenesis, 60000);
+        });
+    </script>
+
+</body>
+</html>

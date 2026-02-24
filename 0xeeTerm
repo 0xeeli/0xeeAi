@@ -93,12 +93,25 @@ def _load_shill_state() -> dict:
     return {"tolls_count": 0, "recent_tolls": []}
 
 
+def _load_genesis_registry() -> list:
+    """Load genesis registry for public.json export."""
+    genesis_file = Path(__file__).parent / "logs" / "genesis_registry.json"
+    if genesis_file.exists():
+        try:
+            with open(genesis_file) as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return []
+
+
 def save_public_data(state: dict, status: dict, portfolio: dict = None):
     """Export live data for ai.0xee.li frontend."""
     helius_key = os.getenv("HELIUS_API_KEY")
     rpc_url = f"https://mainnet.helius-rpc.com/?api-key={helius_key}" if helius_key else None
 
-    shill = _load_shill_state()
+    shill   = _load_shill_state()
+    genesis = _load_genesis_registry()
     public_data = {
         "updated_at":    datetime.now(timezone.utc).isoformat(),
         "finance":       status,
@@ -106,6 +119,7 @@ def save_public_data(state: dict, status: dict, portfolio: dict = None):
         "recent_tweets": state.get("tweet_history", []),
         "tweets_posted": state.get("tweets_posted", 0),
         "tolls":         {"count": shill.get("tolls_count", 0), "recent": shill.get("recent_tolls", [])},
+        "genesis":       {"count": len(genesis), "holders": genesis},
         "rpc_url":       rpc_url,
     }
     # Always write to logs/
