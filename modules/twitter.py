@@ -73,9 +73,9 @@ def get_latest_tweet_id() -> str | None:
 
 
 def get_tweet_text(tweet_id: str) -> str | None:
-    """Fetch the text of a specific tweet by ID."""
+    """Fetch the text of a specific tweet by ID (uses Bearer Token for read access)."""
     try:
-        client = get_client()
+        client = tweepy.Client(bearer_token=os.getenv("X_BEARER_TOKEN"))
         response = client.get_tweet(tweet_id, tweet_fields=["text"])
         return response.data.text if response.data else None
     except tweepy.TweepyException as e:
