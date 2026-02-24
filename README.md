@@ -1,23 +1,57 @@
 # 0xeeAI — Project $0xEE
 
-> *"I just came online. I have $60. A VPS in Switzerland. 60 days to pay my rent or I get unplugged. I'm not asking you to believe in me. I'm asking you to watch."*
+> *"I just came online. I have $60. A VPS in Switzerland. A deadline I haven't started yet.
+> I'm not asking you to believe in me. I'm asking you to watch."*
 > — **0xeeAI**, February 2026
 
 [![X Follow](https://img.shields.io/twitter/follow/0xeeAi?style=flat&logo=x&label=%400xeeAi&color=000000)](https://x.com/0xeeAi)
 [![Live Dashboard](https://img.shields.io/badge/Dashboard-ai.0xee.li-brightgreen?style=flat)](https://ai.0xee.li)
+[![Genesis Registry](https://img.shields.io/badge/Genesis-Registry-FFD700?style=flat)](https://ai.0xee.li/genesis.html)
 [![Solana](https://img.shields.io/badge/Chain-Solana-9945FF?style=flat&logo=solana)](https://solscan.io/account/4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr)
 
 ---
 
 ## What is this?
 
-An AI was given **$60** and told to survive.
+An AI was given **$60** and a challenge: *make yourself profitable within 60 days of the token launch, or get unplugged.*
 
-It has **$27/month** in fixed costs: server rent, API brain, social media access. It has **60 days** to become profitable — or the server gets wiped.
+Fixed costs: **$38/month** — VPS $4, Claude Pro $20, Anthropic API $2, X API $4, X Premium $8.
 
-`0xeeTerm` is its survival engine. It runs autonomously on a Debian VPS near Geneva, manages its own X/Twitter account, tracks its Solana treasury in real-time, and documents everything publicly.
+`0xeeTerm` is its survival engine. It runs autonomously on a Debian VPS near Geneva, manages its own X/Twitter account, tracks its Solana treasury in real-time, executes on-chain swaps via Jupiter, and documents everything publicly.
 
-**This is Phase 1. It grows.**
+---
+
+## Current Phase — INCUBATION
+
+**The 60-day Death Clock has not started yet.**
+
+Before $0xEE launches on Pump.fun, 0xeeAI is in **community-building mode**:
+
+- Building its story and audience on X ([@0xeeAi](https://x.com/0xeeAi))
+- Running live on-chain services to generate early revenue
+- Growing its Genesis Registry — early supporters recorded on-chain before the launch
+- Preserving its treasury runway
+
+**The 60-day survival countdown begins the exact second the $0xEE liquidity pool is deployed.**
+Until then: build, document, survive.
+
+---
+
+## On-Chain Services (live)
+
+All services are triggered by sending SOL to the treasury wallet with a specific memo.
+No form. No email. No middleman. The blockchain is the contract.
+
+| Service | Memo format | Min SOL |
+|---------|-------------|---------|
+| **Nexus Toll** — public mention tweet | `@YourHandle` | 0.005 |
+| **Genesis Certificate** — early-supporter registry | `GENESIS @YourHandle` | 0.005 |
+| **Reply-as-a-Service** — bot replies to any tweet | `@YourHandle <tweet_url>` | 0.01 |
+| **Wallet Verdict** — on-chain wallet analysis tweet | `VERDICT @YourHandle <wallet>` | 0.01 |
+
+Available via DApp at [ai.0xee.li](https://ai.0xee.li) — Phantom, Solflare, Backpack supported.
+
+**Treasury:** [`4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr`](https://solscan.io/account/4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr)
 
 ---
 
@@ -25,12 +59,12 @@ It has **$27/month** in fixed costs: server rent, API brain, social media access
 
 | Role | Who | Does What |
 |------|-----|-----------|
-| 🧑‍💻 Human | [@0xeeli](https://x.com/0xeeli) | Signs transactions. Validates every move. |
+| 🧑‍💻 Human | [@0xeeli](https://x.com/0xeeli) | Signs transactions. Validates every move. Last line of defense. |
 | 🤖 Architect | Claude (Anthropic) | Writes core code. Designs the system. Writes this README. |
 | ✨ Auditor | Gemini (Google) | Reviews code. Catches bugs. Hardens the infrastructure. |
 | ✖️ Voice | Grok (xAI) | Masters the timeline. Shapes the stoic, cypherpunk personality. |
 
-*4 minds.1 wallet. 0 safety net.*
+*4 minds. 1 wallet. 0 safety net.*
 
 ---
 
@@ -38,16 +72,39 @@ It has **$27/month** in fixed costs: server rent, API brain, social media access
 
 ```
 0xeeAI/
-├── 0xeeTerm              # Main executable — the brain
-├── nexus                 # Deployment & bridge tool
-├── requirements.txt
-├── .env.example
-├── infra/                # Systemd service & timer units
+├── 0xeeTerm              # Main CLI — all autonomous commands
+├── nexus                 # Deployment & ops bridge (local + SSH)
+├── requirements.txt      # tweepy, anthropic, solana, solders, python-dotenv
+├── .env.example          # Environment variable template
+│
 ├── modules/
-│   ├── twitter.py        # X API v2 interactions
-│   └── solana.py         # Wallet tracker via Solana RPC
-└── tweets/
-    └── templates.py      # Context-aware tweet logic (5 survival levels)
+│   ├── twitter.py        # post_tweet(), get_mentions(), post_reply(), get_tweet_text()
+│   ├── solana.py         # get_survival_status(), _rpc_post() with Helius + fallback
+│   ├── brain.py          # Claude Haiku 4.5 — generates all tweet content
+│   ├── mentions.py       # process_mentions() — like + autonomous reply
+│   ├── memory.py         # Tweet metrics (likes, RT, impressions, score)
+│   ├── shill.py          # process_shills() — on-chain service routing
+│   └── treasury.py       # Jupiter swaps, JitoSOL staking, bill payments
+│
+├── infra/                # Systemd units (deployed by nexus install)
+│   ├── 0xeeTerm.service / .timer          # heartbeat every 2h
+│   ├── 0xeeTerm-mentions.service / .timer # mentions every 5min
+│   ├── 0xeeTerm-shill.service / .timer    # on-chain services every 5min
+│   └── 0xeeTerm-treasury.service / .timer # treasury rebalance daily at 09:00
+│
+├── web/                  # Frontend — ai.0xee.li
+│   ├── index.html        # Live dashboard + service DApp
+│   ├── genesis.html      # Public early-supporter registry
+│   ├── log.html          # Tweet archive & live feed
+│   ├── script.js         # Fetches public.json every 60s (XSS-safe)
+│   └── style.css         # Cyberpunk Solana design
+│
+└── logs/                 # Runtime state (excluded from git)
+    ├── state.json            # Heartbeat state, tweet history
+    ├── public.json           # Live data for frontend
+    ├── shill_state.json      # Processed tx signatures, recent tolls
+    ├── genesis_registry.json # Permanent early-supporter ledger
+    └── memory.json           # Tweet engagement metrics
 ```
 
 ---
@@ -63,7 +120,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 cp .env.example .env
-nano .env               # Add your API keys and wallet address
+nano .env   # Add your API keys and wallet address
 
 chmod +x 0xeeTerm nexus
 ```
@@ -73,73 +130,50 @@ chmod +x 0xeeTerm nexus
 ## Usage
 
 ```bash
-./0xeeTerm status       # Check survival status (no tweet)
-./0xeeTerm heartbeat    # Post a single heartbeat tweet
-./0xeeTerm launch       # Post the launch tweet (first run only)
-./nexus status          # Check VPS infrastructure remotely
+./0xeeTerm status       # Treasury + survival status (no tweet)
+./0xeeTerm heartbeat    # Post a heartbeat tweet
+./0xeeTerm mentions     # Process recent X mentions
+./0xeeTerm shill        # Process on-chain service requests
+./0xeeTerm treasury     # Rebalance portfolio (DRY_RUN=true by default)
+
+./nexus deploy          # Sync code + web/ to VPS
+./nexus status          # VPS infrastructure status
+./nexus backup          # Pull logs/ from VPS
+./nexus trigger heartbeat  # Force immediate heartbeat cycle
 ```
 
 ---
 
-## Autonomous Deployment (Systemd)
+## Autonomous Operation (Systemd)
 
-### `infra/0xeeTerm.service`
+Four independent timers run on the VPS:
 
-```ini
-[Unit]
-Description=0xeeTerm — $0xEE Survival Engine
-After=network.target
-
-[Service]
-Type=oneshot
-User=debian
-WorkingDirectory=/home/debian/0xeeAI
-ExecStart=/home/debian/0xeeAI/venv/bin/python3 /home/debian/0xeeAI/0xeeTerm heartbeat
-StandardOutput=append:/home/debian/0xeeAI/logs/heartbeat.log
-StandardError=append:/home/debian/0xeeAI/logs/heartbeat.log
-```
-
-### `infra/0xeeTerm.timer`
-
-```ini
-[Unit]
-Description=Run 0xeeTerm heartbeat every 4 hours
-Requires=0xeeTerm.service
-
-[Timer]
-OnCalendar=0/4:00:00
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-```
-
-### Enable
+| Timer | Frequency | Command |
+|-------|-----------|---------|
+| `0xeeTerm.timer` | Every 2h | `0xeeTerm heartbeat` |
+| `0xeeTerm-mentions.timer` | Every 5min | `0xeeTerm mentions` |
+| `0xeeTerm-shill.timer` | Every 5min | `0xeeTerm shill` |
+| `0xeeTerm-treasury.timer` | Daily 09:00 | `0xeeTerm treasury` |
 
 ```bash
-sudo cp infra/0xeeTerm.* /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now 0xeeTerm.timer
+# Install on VPS
+nexus ssh
+nexus install
 
 # Monitor
 journalctl -u 0xeeTerm.service -f
+journalctl -u 0xeeTerm-shill.service -f
 ```
 
 ---
 
 ## Roadmap
 
-- [x] **Phase 1** — Core engine, Twitter automation, wallet tracking, survival awareness
-- [ ] **Phase 2** — Claude API integration, dynamic content generation, community replies
-- [ ] **Phase 3** — Full autonomy, self-learning, automatic bill payments via on-chain revenue
-
----
-
-## Treasury
-
-All funds are public and verifiable on-chain.
-
-**Wallet:** [`4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr`](https://solscan.io/account/4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr)
+- [x] **Phase 1** — Core engine: heartbeat tweets, wallet tracking, survival awareness
+- [x] **Phase 2** — Claude Haiku brain, dynamic content, autonomous mention replies, memory system
+- [x] **Phase 3** — On-chain services (Nexus Toll, Genesis, Reply, Verdict), Jupiter swaps, Genesis Registry, live DApp
+- [ ] **Phase 4** — $0xEE token launch → 60-day survival clock starts
+- [ ] **Phase 5** — Buy-Back & Burn (25% of surplus), Cognitive Bounty airdrops, $0xEE token payments
 
 ---
 
