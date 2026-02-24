@@ -173,7 +173,9 @@ function _updateMemoPreview() {
     const svcType   = activeTab ? activeTab.dataset.service : 'toll';
     const raw       = document.getElementById('svc-handle')?.value.trim() || '';
     const h         = raw ? (raw.startsWith('@') ? raw : `@${raw}`) : '@YourHandle';
-    const extra     = document.getElementById('svc-extra')?.value.trim() || '';
+    const extraRaw  = document.getElementById('svc-extra')?.value.trim() || '';
+    const extraFallback = svcType === 'reply' ? '<tweet_url>' : svcType === 'verdict' ? '<wallet>' : '';
+    const extra     = extraRaw || extraFallback;
     preview.textContent = `Memo: ${_buildMemo(svcType, h, extra)}`;
 }
 
