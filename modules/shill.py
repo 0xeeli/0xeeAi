@@ -176,7 +176,7 @@ def process_shills():
                 f"Shill: {sig[:16]}... below minimum "
                 f"({sol_received:.4f} < {min_sol} SOL) — skipping."
             )
-            processed.add(sig)
+            processed.add(sig)  # intentional skip — mark done
             continue
 
         usd_received = sol_received * sol_price
@@ -188,14 +188,12 @@ def process_shills():
         try:
             tweet_text = generate_shill_tweet(handle, sol_received, usd_received)
         except Exception as e:
-            logger.error(f"Shill: brain error for {handle}: {e}")
-            processed.add(sig)
-            continue
+            logger.error(f"Shill: brain error for {handle}: {e} — will retry next cycle.")
+            continue  # do NOT mark as processed — retry next cycle
 
         if not tweet_text:
-            logger.error(f"Shill: brain returned nothing for {handle} — skipping.")
-            processed.add(sig)
-            continue
+            logger.error(f"Shill: brain returned nothing for {handle} — will retry next cycle.")
+            continue  # do NOT mark as processed — retry next cycle
 
         try:
             result = post_tweet(tweet_text)
@@ -203,7 +201,7 @@ def process_shills():
                 logger.info(f"Shill: tweet posted for {handle} — ID: {result['id']}")
                 new_shills += 1
                 # Track successful toll
-                state["tolls_count"] = state.get("tolls_count", 0) + 1
+                state["tolls_count"] = (state.get("tolls_count") or 0) + 1
                 recent = state.get("recent_tolls", [])
                 recent.insert(0, {
                     "handle": handle,
@@ -211,12 +209,13 @@ def process_shills():
                     "at":     datetime.now(timezone.utc).isoformat(),
                 })
                 state["recent_tolls"] = recent[:10]
+                processed.add(sig)  # success — mark done
             else:
-                logger.error(f"Shill: post_tweet failed for {handle}.")
+                logger.error(f"Shill: post_tweet failed for {handle} — will retry next cycle.")
+                # do NOT mark as processed — retry next cycle
         except Exception as e:
-            logger.error(f"Shill: failed to post tweet for {handle}: {e}")
-
-        processed.add(sig)
+            logger.error(f"Shill: failed to post tweet for {handle}: {e} — will retry next cycle.")
+            # do NOT mark as processed — retry next cycle
 
     # Cap to last 500 to prevent shill_state.json from growing unboundedly
     state["processed_signatures"] = list(processed)[-500:]
