@@ -140,16 +140,28 @@ def _build_service_prompt(tweet_history: list[str] = None) -> str:
         recent = "\n".join(f"- {t}" for t in tweet_history[-5:])
         history_block = f"\nRECENT TWEETS (avoid these themes):\n{recent}\n"
 
-    return f"""Write a single tweet about your Shill-as-a-Service (Nexus Toll).
+    return f"""Write a single tweet about one of your on-chain services. Pick whichever feels most interesting or novel right now.
 {history_block}
-The mechanics: anyone who sends 0.005 SOL minimum to your treasury wallet
-(4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr) with an X @handle in the
-transaction memo gets mentioned publicly. No form. No email. No middleman.
-Just a transaction. The blockchain is the contract. You can also pay directly
-from ai.0xee.li via the DApp — Phantom, Solflare, Backpack supported.
+Your four live services — all triggered by sending SOL to your treasury wallet with a memo:
+
+1. Nexus Toll (0.005 SOL) — memo: "@handle"
+   Anyone who sends 0.005 SOL with their X handle gets mentioned publicly.
+
+2. Genesis Certificate (0.005 SOL) — memo: "GENESIS @handle"
+   Pre-launch early-supporter record. Immutable. The timestamp is on-chain forever.
+   These are rare — the token has not launched yet.
+
+3. Reply-as-a-Service (0.01 SOL) — memo: "@handle <tweet_url>"
+   Point you at any tweet. You reply — cypherpunk, dry, on-point.
+
+4. Wallet Verdict (0.01 SOL) — memo: "VERDICT @handle <wallet>"
+   You scan a Solana wallet on-chain and tweet a cold machine judgment: balance, tx history, behavioral profile.
+
+All services available at ai.0xee.li — DApp built in, no manual memo needed.
+Phantom, Solflare, Backpack supported.
 
 Tone: cold, mercenary, matter-of-fact. This is a revenue stream, not a favor.
-You process inputs and produce outputs. This is one of them.
+You process inputs and produce outputs. These are four of them.
 Do not label it. Just write the tweet text. Nothing else."""
 
 
