@@ -54,8 +54,13 @@ def _save_state(state: dict):
 #  SOLANA RPC HELPERS
 # ─────────────────────────────────────────────
 
-def _get_recent_signatures(wallet: str, rpc: str, limit: int = 20) -> list:
-    """Return recent tx signatures for the wallet, including the memo field."""
+_PUBLIC_RPC = "https://api.mainnet-beta.solana.com"
+
+
+def _get_recent_signatures(wallet: str, limit: int = 20) -> list:
+    """Return recent tx signatures for the wallet, including the memo field.
+    Always uses the public RPC — Helius does not populate the memo field
+    in getSignaturesForAddress responses."""
     try:
         payload = {
             "jsonrpc": "2.0",
@@ -63,7 +68,7 @@ def _get_recent_signatures(wallet: str, rpc: str, limit: int = 20) -> list:
             "method": "getSignaturesForAddress",
             "params": [wallet, {"limit": limit}],
         }
-        r = requests.post(rpc, json=payload, timeout=10)
+        r = requests.post(_PUBLIC_RPC, json=payload, timeout=10)
         return r.json().get("result", [])
     except Exception as e:
         logger.error(f"Shill: failed to fetch signatures: {e}")
@@ -139,8 +144,8 @@ def process_shills():
     state     = _load_state()
     processed = set(state.get("processed_signatures", []))
 
-    rpc        = _get_rpc()
-    signatures = _get_recent_signatures(wallet, rpc)
+    rpc        = _get_rpc()                          # used for getTransaction / balance
+    signatures = _get_recent_signatures(wallet)      # always public RPC — memo fields
     if not signatures:
         logger.info("Shill: no recent transactions found.")
         return
