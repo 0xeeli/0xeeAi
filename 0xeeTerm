@@ -419,6 +419,10 @@ def run_shill():
     """Scan on-chain transactions for paid shill requests and post mention tweets."""
     logger.info("Running shill cycle...")
     process_shills()
+    # Refresh public.json so the dashboard reflects new recent_tolls immediately
+    state = load_state()
+    status = _load_cached_status()
+    save_public_data(state, status)
 
 
 def run_verdict(wallet_addr: str):
