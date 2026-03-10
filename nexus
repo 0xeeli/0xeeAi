@@ -355,6 +355,17 @@ def shill_cmd():
         subprocess.run(["ssh", "-p", VPS_PORT, f"{VPS_USER}@{VPS_IP}", remote_cmd])
 
 
+def verdict_cmd(wallet: str):
+    """Trigger a free promo Wallet Verdict on the VPS: ./0xeeTerm verdict <wallet>."""
+    remote_cmd = f"cd {REMOTE_DIR.rstrip('/')} && venv/bin/python3 0xeeTerm verdict {wallet}"
+    if IS_VPS:
+        print(f"[\033[93mVPS\033[0m] Running verdict for {wallet[:16]}... locally...\n")
+        subprocess.run(["bash", "-c", remote_cmd])
+    else:
+        print(f"[\033[95mBRIDGE\033[0m] Running verdict for {wallet[:16]}... on {VPS_IP}...\n")
+        subprocess.run(["ssh", "-p", VPS_PORT, f"{VPS_USER}@{VPS_IP}", remote_cmd])
+
+
 def roast_cmd(handle: str, tweet_url: str):
     """Trigger a manual roast on the VPS: ./0xeeTerm roast <handle> <tweet_url>."""
     remote_cmd = (
@@ -482,6 +493,7 @@ def show_help():
         print("  trigger mentions   : Trigger a mentions run on VPS via SSH")
         print("  memory             : Refresh tweet metrics and show top performers")
         print("  shill              : Scan on-chain txs for paid shill requests")
+        print("  verdict <wallet>   : Free promo wallet verdict tweet")
         print("  roast <@h> <url>   : Manual roast — reply to tweet + confirmation post (free)")
         print("  treasury           : Run autonomous treasury cycle (portfolio, stake, bills)")
         print("  swap <from> <to> <amount> : Manual swap via Jupiter (sol/usdc/jitosol)")
@@ -530,6 +542,11 @@ if __name__ == "__main__":
         memory_cmd()
     elif cmd == "shill":
         shill_cmd()
+    elif cmd == "verdict":
+        if len(sys.argv) < 3:
+            print(f"[\033[91mERROR\033[0m] Usage: nexus verdict <wallet_address>")
+            sys.exit(1)
+        verdict_cmd(sys.argv[2])
     elif cmd == "roast":
         if len(sys.argv) < 4:
             print(f"[\033[91mERROR\033[0m] Usage: nexus roast <@handle> <tweet_url>")
