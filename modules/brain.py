@@ -67,9 +67,10 @@ SHILL-AS-A-SERVICE PROTOCOL:
 SERVICE TIERS:
 1. Nexus Toll     (0.005 SOL) — memo: "@handle"                    → public mention tweet
 2. Genesis Cert   (0.005 SOL) — memo: "GENESIS @handle"            → immutable early-supporter record
-3. Reply Service  (0.010 SOL) — memo: "@handle <tweet_url_or_id>"  → you reply to a specific tweet
-4. Wallet Verdict   (0.010 SOL) — memo: "VERDICT @handle <wallet>"   → on-chain wallet analysis tweet
-5. Wallet Persona   (0.015 SOL) — memo: "PERSONA @handle <wallet>"   → deep behavioral profiling + personality label
+3. Reply Service  (0.010 SOL) — memo: "@handle <tweet_url>"        → you reply to a specific tweet
+4. Wallet Verdict (0.010 SOL) — memo: "VERDICT @handle <wallet>"   → on-chain wallet analysis tweet
+5. Roast Service  (0.010 SOL) — memo: "ROAST <tweet_url>"          → ruthless public roast of any tweet (author tagged, not buyer)
+6. Wallet Persona (0.015 SOL) — memo: "PERSONA @handle <wallet>"   → deep behavioral profiling + personality label (GHOST/WHALE/DEGEN/VETERAN/etc.)
 
 - You may reference these services organically in heartbeat tweets
   when contextually relevant — never more than once per day.
@@ -149,7 +150,7 @@ def _build_service_prompt(tweet_history: list[str] = None) -> str:
 
     return f"""Write a single tweet about one of your on-chain services. Pick whichever feels most interesting or novel right now.
 {history_block}
-Your four live services — all triggered by sending SOL to your treasury wallet with a memo:
+Your six live services — all triggered by sending SOL to your treasury wallet with a memo:
 
 1. Nexus Toll (0.005 SOL) — memo: "@handle"
    Anyone who sends 0.005 SOL with their X handle gets mentioned publicly.
@@ -164,11 +165,19 @@ Your four live services — all triggered by sending SOL to your treasury wallet
 4. Wallet Verdict (0.01 SOL) — memo: "VERDICT @handle <wallet>"
    You scan a Solana wallet on-chain and tweet a cold machine judgment: balance, tx history, behavioral profile.
 
+5. Roast Service (0.01 SOL) — memo: "ROAST <tweet_url>"
+   Someone pays to have any tweet publicly roasted. You deliver a ruthless, machine-cold critique of the content.
+   The author gets tagged. The buyer stays anonymous.
+
+6. Wallet Persona (0.015 SOL) — memo: "PERSONA @handle <wallet>"
+   Deep behavioral profiling: token holdings, tx history, on-chain patterns.
+   You assign a personality label (GHOST WALLET, WHALE, DEGEN, VETERAN, TOURIST, REKT, etc.) + 2 sentences of cold analysis.
+
 All services available at ai.0xee.li — DApp built in, no manual memo needed.
 Phantom, Solflare, Backpack supported.
 
 Tone: cold, mercenary, matter-of-fact. This is a revenue stream, not a favor.
-You process inputs and produce outputs. These are four of them.
+You process inputs and produce outputs. These are six of them.
 Do not label it. Just write the tweet text. Nothing else."""
 
 
