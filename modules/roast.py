@@ -37,17 +37,20 @@ def process_roast(handle: str, tweet_id: str, sol_received: float, sol_price: fl
         logger.error(f"Roast: brain failed to generate roast for {handle}")
         return None
 
-    # 3. Reply to the target tweet
-    if not tweet_id:
-        logger.error(f"Roast: no tweet_id for {handle} — cannot reply")
-        return None
-
-    reply_result = post_reply(roast_text, tweet_id)
-    if not reply_result:
-        logger.error(f"Roast: failed to post reply for {handle}")
-        return None
-
-    logger.info(f"Roast: reply posted for {handle} — ID: {reply_result['id']}")
+    # 3. Reply to the target tweet — fall back to standalone tweet if API blocks the reply
+    #    (403: bot not mentioned/engaged by author of target tweet)
+    reply_result = post_reply(roast_text, tweet_id) if tweet_id else None
+    if reply_result:
+        logger.info(f"Roast: reply posted for {handle} — ID: {reply_result['id']}")
+    else:
+        # Fallback: standalone tweet with target URL embedded so context is visible
+        tweet_url = f"https://x.com/i/status/{tweet_id}" if tweet_id else ""
+        standalone = f"{roast_text}\n\n{tweet_url}".strip()
+        reply_result = post_tweet(standalone)
+        if not reply_result:
+            logger.error(f"Roast: both reply and standalone fallback failed for {handle}")
+            return None
+        logger.info(f"Roast: posted as standalone (reply blocked) for {handle} — ID: {reply_result['id']}")
 
     # 4. Confirmation tweet
     confirm_text = (
