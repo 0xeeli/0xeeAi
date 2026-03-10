@@ -170,6 +170,14 @@ def _extract_tweet_id(memo: str) -> str | None:
     return None
 
 
+def _extract_handle_from_tweet_url(memo: str) -> str | None:
+    """Extract @handle from a tweet URL: x.com/<handle>/status/<id>."""
+    if not memo:
+        return None
+    m = re.search(r'(?:x\.com|twitter\.com)/(\w{1,50})/status/', memo)
+    return f"@{m.group(1)}" if m else None
+
+
 def _extract_solana_wallet(memo: str) -> str | None:
     """Extract a Solana wallet address (base58, 32-44 chars) from memo."""
     if not memo:
@@ -184,7 +192,7 @@ def _parse_service(memo: str) -> dict:
     Memo formats:
     - "GENESIS @handle"                      → type=genesis
     - "VERDICT @handle <wallet>"             → type=verdict
-    - "ROAST @handle <tweet_id_or_url>"      → type=roast
+    - "ROAST <tweet_url>"                    → type=roast (handle extracted from URL)
     - "PERSONA @handle <wallet_address>"     → type=persona
     - "@handle <tweet_id_or_url>"            → type=reply
     - "@handle"                              → type=toll
@@ -209,11 +217,11 @@ def _parse_service(memo: str) -> dict:
         if handle:
             return {"type": "verdict", "handle": handle, "wallet": wallet}
 
-    # ROAST @handle <tweet_id_or_url>
-    if re.match(r"^ROAST\s+@\w", memo, re.IGNORECASE):
-        handle = _extract_twitter_handle(memo)
+    # ROAST <tweet_url>  — handle extracted from URL (x.com/<handle>/status/<id>)
+    if re.match(r"^ROAST\s+", memo, re.IGNORECASE):
         tweet_id = _extract_tweet_id(memo)
-        if handle:
+        handle   = _extract_handle_from_tweet_url(memo)
+        if tweet_id:
             return {"type": "roast", "handle": handle, "tweet_id": tweet_id}
 
     # PERSONA @handle <wallet_address>

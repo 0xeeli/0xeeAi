@@ -176,7 +176,8 @@ function _updateMemoPreview() {
     const extraRaw  = document.getElementById('svc-extra')?.value.trim() || '';
     const extraFallback = (svcType === 'reply' || svcType === 'roast') ? '<tweet_url>' : (svcType === 'verdict' || svcType === 'persona') ? '<wallet>' : '';
     const extra     = extraRaw || extraFallback;
-    preview.textContent = `Memo: ${_buildMemo(svcType, h, extra)}`;
+    // For roast the handle is not part of the memo — extracted from URL server-side
+    preview.textContent = `Memo: ${_buildMemo(svcType, svcType === 'roast' ? '' : h, extra)}`;
 }
 
 // Lancement au premier chargement de la page
@@ -203,6 +204,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const btn        = document.getElementById('pay-service-btn');
             const lamports   = SERVICE_LAMPORTS[svc] || 5_000_000;
             btn.textContent  = `Pay ${lamports / 1_000_000_000} SOL`;
+
+            const handleInput = document.getElementById('svc-handle');
+            if (handleInput) handleInput.style.display = svc === 'roast' ? 'none' : '';
 
             if (svc === 'reply' || svc === 'roast') {
                 extraWrap.style.display = '';
@@ -243,7 +247,7 @@ function _buildMemo(svcType, handle, extra) {
         case 'genesis': return `GENESIS ${handle}`;
         case 'reply':   return `${handle} ${extra}`;
         case 'verdict': return `VERDICT ${handle} ${extra}`;
-        case 'roast':   return `ROAST ${handle} ${extra}`;
+        case 'roast':   return `ROAST ${extra}`;
         case 'persona': return `PERSONA ${handle} ${extra}`;
         default:        return handle; // toll
     }
