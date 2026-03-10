@@ -58,10 +58,11 @@ def process_roast(handle: str, tweet_id: str, sol_received: float, sol_price: fl
         logger.info(f"Roast: posted as standalone (reply blocked) for {handle} — ID: {reply_result['id']}")
 
     # 4. Confirmation tweet — handle is the TARGET, not the buyer
+    treasury_line = f"Treasury: +${usd:.2f}\n" if sol_received > 0 else ""
     confirm_text = (
         f"ROAST EXECUTED\n\n"
         f"Target: {handle}\n"
-        f"0.01 SOL received. Treasury +${usd:.2f}.\n"
+        f"{treasury_line}"
         f"The blockchain has receipted this transaction.\n\n"
         f"$0xEE — ai.0xee.li"
     )

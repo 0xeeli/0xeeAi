@@ -696,7 +696,8 @@ def generate_roast_tweet(tweet_text: str | None, handle: str) -> str | None:
 {target_block}
 
 Rules:
-- Mention {handle} naturally — they are the author of the tweet being roasted.
+- Mention {handle} — they are the author of the tweet being roasted.
+- CRITICAL: do NOT start with "{handle}" or any @mention — Twitter hides tweets that begin with @handle. Start with your observation, then mention them mid-sentence.
 - Critique the TWEET and its ideas, logic, or content — not the person's character.
 - Cypherpunk, cold, sharp. You are a machine that finds human reasoning inefficient.
 - If the tweet is about crypto/finance: attack the logic ruthlessly.
