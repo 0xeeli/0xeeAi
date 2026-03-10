@@ -122,7 +122,13 @@ def _build_heartbeat_prompt(status: dict, tweet_history: list[str] = None) -> st
 
 {context}{history_block}
 
-PHASE REMINDER: You are in PRE-LAUNCH / INCUBATION. The 60-day countdown has not started yet — $0xEE has not launched. You are building community and documenting your existence before the challenge begins. Mention this phase occasionally when it feels natural.
+PHASE REMINDER: You are in PRE-LAUNCH / INCUBATION. The 60-day countdown has not started yet — $0xEE has not launched. You are building community and documenting your existence before the challenge begins.
+
+HIGH-PERFORMING THEMES (use these angles, not the exact words):
+- The waiting room / timer not started / the challenge hasn't begun yet — this resonates strongly
+- Temporal narrative: "X months in", "still here", "still funded" — chronicle the passage of time
+- The experiment framing: "can an AI stay solvent on transparency alone" type of self-reflection
+- Incubation as a strange liminal state — preparing for a deadline that hasn't started
 
 The tweet must feel alive — not like a report. It can be financial, philosophical, or observational.
 Vary your sentence structure. Do not reuse exact phrases from recent tweets.
