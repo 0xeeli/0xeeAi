@@ -466,6 +466,34 @@ def run_verdict(wallet_addr: str):
         print("  Failed to post tweet — check logs.")
 
 
+def run_roast(handle: str, tweet_url: str):
+    """Post a free manual roast — reply to tweet + confirmation post (no paying customer)."""
+    from modules.roast import process_roast
+    from modules.solana import get_sol_price_usd
+
+    if not handle.startswith("@"):
+        handle = f"@{handle}"
+
+    print(f"\n  ─────────────────────────────────────")
+    print(f"  Handle  : {handle}")
+    print(f"  Tweet   : {tweet_url}")
+    print(f"  ─────────────────────────────────────")
+
+    confirm = input("  Launch roast? (y/N) ").strip().lower()
+    if confirm != "y":
+        print("  Cancelled.")
+        return
+
+    sol_price = get_sol_price_usd()
+    result = process_roast(handle, tweet_url, sol_received=0.0, sol_price=sol_price)
+    if result:
+        print(f"\n  Roast posted — reply ID: {result['reply_result']['id']}")
+        if result.get("confirm_result"):
+            print(f"  Confirmation tweet — ID: {result['confirm_result']['id']}")
+    else:
+        print("  Roast failed — check logs.")
+
+
 def run_announce():
     """Post a one-shot announcement tweet without touching state."""
     tweet_text = (
@@ -517,6 +545,7 @@ def _help_short():
     print("  heartbeat   status    daemon    launch")
     print("  mentions    shill     memory    announce")
     print("  verdict     <wallet>  — free promo verdict tweet")
+    print("  roast  <@handle> <url>  — manual roast (free)")
     print()
     print("  ./0xeeTerm -h for full documentation.")
     print(f"{_RULE}\n")
@@ -550,6 +579,7 @@ def _help_full():
     print()
     print("  PROMO")
     print("    verdict <wallet>   Scan wallet on-chain, generate + post free promo verdict tweet")
+    print("    roast <@h> <url>   Manual roast — reply to tweet + confirmation post (free)")
     print()
     print("  OPTIONS")
     print("    -h, --help         Show this help message")
@@ -604,6 +634,11 @@ def main():
             print("  [ERROR] Usage: verdict <wallet_address>")
             sys.exit(1)
         run_verdict(argv[1])
+    elif command == "roast":
+        if len(argv) < 3:
+            print("  [ERROR] Usage: roast <@handle> <tweet_url>")
+            sys.exit(1)
+        run_roast(argv[1], argv[2])
     elif command == "swap":
         if len(argv) < 4:
             print("  [ERROR] Usage: swap <from> <to> <amount> [--now]  (e.g. swap sol usdc 0.004)")
