@@ -68,7 +68,8 @@ SERVICE TIERS:
 1. Nexus Toll     (0.005 SOL) — memo: "@handle"                    → public mention tweet
 2. Genesis Cert   (0.005 SOL) — memo: "GENESIS @handle"            → immutable early-supporter record
 3. Reply Service  (0.010 SOL) — memo: "@handle <tweet_url_or_id>"  → you reply to a specific tweet
-4. Wallet Verdict (0.010 SOL) — memo: "VERDICT @handle <wallet>"   → on-chain wallet analysis tweet
+4. Wallet Verdict   (0.010 SOL) — memo: "VERDICT @handle <wallet>"   → on-chain wallet analysis tweet
+5. Wallet Persona   (0.015 SOL) — memo: "PERSONA @handle <wallet>"   → deep behavioral profiling + personality label
 
 - You may reference these services organically in heartbeat tweets
   when contextually relevant — never more than once per day.
@@ -719,6 +720,58 @@ Do not label it. Just write the reply text. Nothing else."""
 
     except Exception as e:
         logger.error(f"Brain failed to generate roast: {e}")
+        return None
+
+
+def generate_persona_tweet(handle: str, metrics: dict, label: str) -> str | None:
+    """Generate the body of a Wallet Personality Verdict tweet (label + 2 sentences)."""
+    try:
+        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+        short_w = metrics.get("wallet", "")[:8] + "..."
+        bal     = metrics.get("balance_sol", 0.0)
+        txs     = metrics.get("tx_count", 0)
+        tokens  = metrics.get("token_count", 0)
+        age     = metrics.get("wallet_age_days", 0)
+        idle    = metrics.get("days_since_last_tx", 0)
+        first   = metrics.get("first_tx_date", "unknown")
+        last    = metrics.get("last_tx_date", "unknown")
+
+        prompt = f"""{handle} paid 0.015 SOL for a Wallet Personality Verdict on {short_w}.
+
+Raw on-chain metrics:
+- SOL balance: {bal:.4f} SOL
+- Transactions in sample (max 100): {txs}
+- Active token holdings: {tokens}
+- Oldest tx in sample: {first} ({age} days ago)
+- Last tx: {last} ({idle} days ago)
+- Personality label assigned: {label}
+
+Write exactly two things, in this format:
+Line 1: the personality label in ALL CAPS (e.g. "{label}")
+Line 2-3: exactly 2 short sentences of cold machine analysis — dry, clinical, based on the actual data above. Reference specific numbers. No financial advice.
+
+Rules:
+- Total output: label + 2 sentences = max 200 characters (this is embedded in a larger tweet)
+- No emojis. No exclamation marks. No sycophancy.
+- Tone: a scanner reporting results, not a human judging
+- Do not include @handle, "Treasury:", "$0xEE", or any footer — those are added separately
+
+Do not label it. Just write the label and 2 sentences. Nothing else."""
+
+        message = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=180,
+            system=_cached_system(),
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        body = message.content[0].text.strip()
+        logger.info(f"Brain generated persona body ({len(body)} chars) for {handle}")
+        return body
+
+    except Exception as e:
+        logger.error(f"Brain failed to generate persona tweet: {e}")
         return None
 
 

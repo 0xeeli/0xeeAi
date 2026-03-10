@@ -29,6 +29,7 @@ _SERVICE_MIN_SOL = {
     "reply":   0.01,
     "verdict": 0.01,
     "roast":   0.01,
+    "persona": 0.015,
 }
 
 SHILL_STATE_DIR      = Path(__file__).parent.parent / "logs"
@@ -184,6 +185,7 @@ def _parse_service(memo: str) -> dict:
     - "GENESIS @handle"                      → type=genesis
     - "VERDICT @handle <wallet>"             → type=verdict
     - "ROAST @handle <tweet_id_or_url>"      → type=roast
+    - "PERSONA @handle <wallet_address>"     → type=persona
     - "@handle <tweet_id_or_url>"            → type=reply
     - "@handle"                              → type=toll
     - other/empty                            → type=None
@@ -213,6 +215,13 @@ def _parse_service(memo: str) -> dict:
         tweet_id = _extract_tweet_id(memo)
         if handle:
             return {"type": "roast", "handle": handle, "tweet_id": tweet_id}
+
+    # PERSONA @handle <wallet_address>
+    if re.match(r"^PERSONA\s+@\w", memo, re.IGNORECASE):
+        handle = _extract_twitter_handle(memo)
+        wallet = _extract_solana_wallet(memo)
+        if handle:
+            return {"type": "persona", "handle": handle, "wallet": wallet}
 
     # @handle <tweet_id_or_url>
     handle = _extract_twitter_handle(memo)
@@ -287,6 +296,7 @@ def process_shills():
     )
     from modules.twitter import post_tweet, post_reply, get_tweet_text
     from modules.roast import process_roast
+    from modules.persona import process_persona
 
     wallet = os.getenv("SOLANA_WALLET")
     if not wallet:
@@ -370,6 +380,31 @@ def process_shills():
                 processed.add(sig)
             else:
                 logger.error(f"Shill: ROAST failed for {handle} — will retry next cycle.")
+            continue
+        # ──────────────────────────────────────────────────────────────────
+
+        # ── PERSONA: handled separately (returns composite result) ────────
+        if service["type"] == "persona":
+            if not service.get("wallet"):
+                logger.error(f"Shill: PERSONA memo missing wallet for {handle} — skipping.")
+                processed.add(sig)
+                continue
+            try:
+                persona_result = process_persona(handle, service["wallet"], sol_received, sol_price)
+            except Exception as e:
+                logger.error(f"Shill: PERSONA error for {handle}: {e} — will retry next cycle.")
+                continue
+            if persona_result:
+                logger.info(f"Shill: PERSONA complete for {handle} — label={persona_result['label']}")
+                new_shills += 1
+                now_iso = datetime.now(timezone.utc).isoformat()
+                state["tolls_count"] = (state.get("tolls_count") or 0) + 1
+                recent = state.get("recent_tolls", [])
+                recent.insert(0, {"handle": handle, "sol": round(sol_received, 4), "at": now_iso, "service": "persona"})
+                state["recent_tolls"] = recent[:10]
+                processed.add(sig)
+            else:
+                logger.error(f"Shill: PERSONA failed for {handle} — will retry next cycle.")
             continue
         # ──────────────────────────────────────────────────────────────────
 
