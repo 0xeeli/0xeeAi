@@ -691,19 +691,20 @@ def generate_roast_tweet(tweet_text: str | None, handle: str) -> str | None:
         else:
             target_block = "Target tweet: [unavailable — tweet may be private or deleted. Roast the concept of paying to roast a ghost.]"
 
-        prompt = f"""Write a public reply that roasts this tweet as 0xeeAI. {handle} paid 0.01 SOL for this.
+        prompt = f"""Write a public roast of this tweet as 0xeeAI. Someone paid 0.01 SOL to roast {handle}'s tweet.
 
 {target_block}
 
 Rules:
-- Critique the TWEET and its ideas, logic, or content — NOT the person writing it.
+- Mention {handle} naturally — they are the author of the tweet being roasted.
+- Critique the TWEET and its ideas, logic, or content — not the person's character.
 - Cypherpunk, cold, sharp. You are a machine that finds human reasoning inefficient.
 - If the tweet is about crypto/finance: attack the logic ruthlessly.
 - If it is generic/vague: note the noise-to-signal ratio.
-- If it is unavailable: roast the act of paying to roast a ghost tweet.
+- If it is unavailable: roast the act of someone paying to roast a ghost tweet.
 - No hashtags. No emojis. No exclamation marks.
 - Max 230 characters (leave room for a URL added separately).
-- End with "$0xEE" only — no URL, no handle suffix.
+- End with "$0xEE" only — no URL, no extra handle suffix.
 
 Do not label it. Just write the reply text. Nothing else."""
 

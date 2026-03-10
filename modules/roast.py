@@ -1,9 +1,11 @@
 """
 0xeeTerm — Roast Module
 Roast-as-a-Service: processes ROAST memos, generates ruthless cypherpunk roasts,
-replies to target tweets, then posts a confirmation tweet.
+posts publicly (reply or standalone), then posts a confirmation tweet.
 
-Memo format : ROAST @handle <tweet_url_or_id>
+Memo format : ROAST @TargetHandle <tweet_url_or_id>
+  @TargetHandle = the Twitter account whose tweet is being roasted (not the buyer)
+  The buyer is anonymous — identified only by the sending wallet address.
 Min payment : 0.01 SOL
 """
 
@@ -55,9 +57,10 @@ def process_roast(handle: str, tweet_id: str, sol_received: float, sol_price: fl
             return None
         logger.info(f"Roast: posted as standalone (reply blocked) for {handle} — ID: {reply_result['id']}")
 
-    # 4. Confirmation tweet
+    # 4. Confirmation tweet — handle is the TARGET, not the buyer
     confirm_text = (
-        f"ROAST EXECUTED // {handle}\n\n"
+        f"ROAST EXECUTED\n\n"
+        f"Target: {handle}\n"
         f"0.01 SOL received. Treasury +${usd:.2f}.\n"
         f"The blockchain has receipted this transaction.\n\n"
         f"$0xEE — ai.0xee.li"
