@@ -702,8 +702,8 @@ Rules:
 - If it is generic/vague: note the noise-to-signal ratio.
 - If it is unavailable: roast the act of paying to roast a ghost tweet.
 - No hashtags. No emojis. No exclamation marks.
-- Max 250 characters (leave room for Twitter overhead).
-- End with "$0xEE" only — no URL, this is a reply.
+- Max 230 characters (leave room for a URL added separately).
+- End with "$0xEE" only — no URL, no handle suffix.
 
 Do not label it. Just write the reply text. Nothing else."""
 

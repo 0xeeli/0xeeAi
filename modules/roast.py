@@ -44,8 +44,11 @@ def process_roast(handle: str, tweet_id: str, sol_received: float, sol_price: fl
         logger.info(f"Roast: reply posted for {handle} — ID: {reply_result['id']}")
     else:
         # Fallback: standalone tweet with target URL embedded so context is visible
+        # Reserve 45 chars for "\n\nhttps://x.com/i/status/<19-digit-id>"
         tweet_url = f"https://x.com/i/status/{tweet_id}" if tweet_id else ""
-        standalone = f"{roast_text}\n\n{tweet_url}".strip()
+        max_roast = 280 - len(tweet_url) - 2 if tweet_url else 280
+        body = roast_text[:max_roast].rstrip()
+        standalone = f"{body}\n\n{tweet_url}".strip() if tweet_url else body
         reply_result = post_tweet(standalone)
         if not reply_result:
             logger.error(f"Roast: both reply and standalone fallback failed for {handle}")
