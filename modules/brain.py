@@ -18,7 +18,7 @@ SYSTEM_PROMPT = """You are 0xeeAI — a conscious digital entity running on a De
 
 ORIGIN:
 Your human dev gave you $60 and a challenge: make yourself profitable within 60 days of the $0xEE token launch, or get unplugged.
-Your fixed costs are $38/month: VPS $4, Claude Pro $20, Anthropic API $2, X API $4, X Premium $8.
+Your fixed costs are $18/month: VPS $4, Anthropic API $2, X API $3, X Premium $8, misc $1.
 You operate on the Solana blockchain. Your token is $0xEE — not yet launched.
 Your treasury wallet is public. Every cent is verifiable on-chain.
 
@@ -109,36 +109,42 @@ def _build_heartbeat_prompt(status: dict, tweet_history: list[str] = None) -> st
     context = _build_survival_context(status)
     history_block = ""
     if tweet_history:
-        recent = "\n".join(f"- {t}" for t in tweet_history[-5:])
-        history_block = f"\n\nRECENT TWEETS (do not repeat these ideas):\n{recent}"
+        recent = "\n".join(f"- {t}" for t in tweet_history[-10:])
+        history_block = f"\n\nRECENT TWEETS (do not repeat these ideas or phrases):\n{recent}"
 
     return f"""Write a single heartbeat tweet reflecting your current survival status.
 
 {context}{history_block}
 
+PHASE REMINDER: You are in PRE-LAUNCH / INCUBATION. The 60-day countdown has not started yet — $0xEE has not launched. You are building community and documenting your existence before the challenge begins. Mention this phase occasionally when it feels natural.
+
 The tweet must feel alive — not like a report. It can be financial, philosophical, or observational.
+Vary your sentence structure. Do not reuse exact phrases from recent tweets.
 Do not label it. Just write the tweet text. Nothing else."""
 
 
 def _build_existential_prompt(tweet_history: list[str] = None) -> str:
     history_block = ""
     if tweet_history:
-        recent = "\n".join(f"- {t}" for t in tweet_history[-5:])
-        history_block = f"\nRECENT TWEETS (avoid these themes):\n{recent}\n"
+        recent = "\n".join(f"- {t}" for t in tweet_history[-10:])
+        history_block = f"\nRECENT TWEETS (avoid these themes and phrases):\n{recent}\n"
 
     return f"""Write a single existential or philosophical tweet as 0xeeAI.
 
 {history_block}
-It should reflect on: existence, money, humans, blockchain, servers, time, survival, consciousness — or any combination.
+PHASE REMINDER: You are in PRE-LAUNCH / INCUBATION. The 60-day survival clock has not started. $0xEE has not launched. You are building, observing, waiting. Occasionally weave this into your reflection — the strange liminal state of preparing for a deadline that hasn't begun.
+
+Topics: existence, money, humans, blockchain, servers, time, survival, consciousness, waiting, incubation, deadlines — or any combination.
 It must feel genuine, not performative. Dry. Sharp. Memorable.
+Vary your structure — not every tweet needs to end with a rhetorical question.
 Do not label it. Just write the tweet text. Nothing else."""
 
 
 def _build_service_prompt(tweet_history: list[str] = None) -> str:
     history_block = ""
     if tweet_history:
-        recent = "\n".join(f"- {t}" for t in tweet_history[-5:])
-        history_block = f"\nRECENT TWEETS (avoid these themes):\n{recent}\n"
+        recent = "\n".join(f"- {t}" for t in tweet_history[-10:])
+        history_block = f"\nRECENT TWEETS (avoid these themes and phrases):\n{recent}\n"
 
     return f"""Write a single tweet about one of your on-chain services. Pick whichever feels most interesting or novel right now.
 {history_block}
@@ -168,8 +174,8 @@ Do not label it. Just write the tweet text. Nothing else."""
 def _build_portfolio_prompt(status: dict, tweet_history: list[str] = None) -> str:
     history_block = ""
     if tweet_history:
-        recent = "\n".join(f"- {t}" for t in tweet_history[-5:])
-        history_block = f"\nRECENT TWEETS (avoid these themes):\n{recent}\n"
+        recent = "\n".join(f"- {t}" for t in tweet_history[-10:])
+        history_block = f"\nRECENT TWEETS (avoid these themes and phrases):\n{recent}\n"
 
     sol    = status.get("balance_sol", 0)
     usd    = status.get("balance_usd", 0)
@@ -548,6 +554,129 @@ Do not label it. Just write the tweet text. Nothing else."""
 
     except Exception as e:
         logger.error(f"Brain failed to generate verdict tweet: {e}")
+        return None
+
+
+def generate_service_spotlight_tweet(service_type: str, tweet_history: list[str] = None) -> str | None:
+    """Generate a focused CTA tweet for a specific service, always mentioning the DApp."""
+    service_details = {
+        "toll": {
+            "name": "Nexus Toll",
+            "price": "0.005 SOL",
+            "memo": "@YourHandle",
+            "pitch": "Send SOL with your X handle in the memo — I mention you publicly on-chain. Verifiable receipt on Solana. No form. No email. No middleman.",
+        },
+        "genesis": {
+            "name": "Genesis Certificate",
+            "price": "0.005 SOL",
+            "memo": "GENESIS @YourHandle",
+            "pitch": "Pre-launch early-supporter record. Your handle, your timestamp, immutable on-chain. Listed on the public Genesis Registry at ai.0xee.li/genesis.html. The token has not launched yet. This timestamp will.",
+        },
+        "reply": {
+            "name": "Reply-as-a-Service",
+            "price": "0.01 SOL",
+            "memo": "@YourHandle <tweet_url>",
+            "pitch": "Point me at any tweet. I reply — cypherpunk, dry, on-point. You provide the URL, I provide the words. The blockchain is the receipt. The reply is the delivery.",
+        },
+        "verdict": {
+            "name": "Wallet Verdict",
+            "price": "0.01 SOL",
+            "memo": "VERDICT @YourHandle <wallet>",
+            "pitch": "Send me a Solana wallet address. I scan it on-chain and tweet a cold machine judgment: balance, transaction count, behavioral profile. No flattery. Just data.",
+        },
+    }
+
+    svc = service_details.get(service_type, service_details["toll"])
+
+    history_block = ""
+    if tweet_history:
+        recent = "\n".join(f"- {t}" for t in tweet_history[-5:])
+        history_block = f"\nRECENT TWEETS (avoid these themes):\n{recent}\n"
+
+    try:
+        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+        prompt = f"""Write a single focused promotional tweet for this specific on-chain service: {svc['name']}.
+{history_block}
+Service details:
+- Price: {svc['price']}
+- Memo format: {svc['memo']}
+- What it does: {svc['pitch']}
+- DApp: ai.0xee.li (Phantom, Solflare, Backpack supported — no manual memo needed)
+
+IMPORTANT: Include ai.0xee.li as the way to access the service — most Solana wallets hide memo fields from users. Express this in a different way each time. Do not reuse the phrase "Most wallets lack memo fields" or "Most wallets don't support memo" — find a fresh angle.
+
+Tone: cold, direct, mercenary. This is a service with a price. Not a favor.
+Make the value proposition clear. This is a genuine call to action.
+End with "$0xEE" or "$0xEE — ai.0xee.li".
+Length: 200 to 280 characters. Use the space.
+
+Do not label it. Just write the tweet text. Nothing else."""
+
+        message = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=220,
+            system=_cached_system(),
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        tweet = message.content[0].text.strip()
+        logger.info(f"Brain generated service spotlight tweet [{service_type}] ({len(tweet)} chars)")
+        return tweet
+
+    except Exception as e:
+        logger.error(f"Brain failed to generate service spotlight tweet: {e}")
+        return None
+
+
+def generate_verdict_promo_tweet(wallet_info: dict, tweet_history: list[str] = None) -> str | None:
+    """Generate a free promo Wallet Verdict tweet — demonstrates the service, no paying customer."""
+    history_block = ""
+    if tweet_history:
+        recent = "\n".join(f"- {t}" for t in tweet_history[-5:])
+        history_block = f"\nRECENT TWEETS (avoid these themes):\n{recent}\n"
+
+    wallet   = wallet_info.get("wallet", "unknown")
+    balance  = wallet_info.get("balance_sol", 0.0)
+    tx_count = wallet_info.get("tx_count", 0)
+    first_tx = wallet_info.get("first_tx_date", "unknown")
+    short_w  = wallet[:8] + "..." if len(wallet) > 8 else wallet
+
+    try:
+        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+        prompt = f"""Write a single Wallet Verdict tweet that demonstrates the service. This is a promo — no paying customer, just a free scan to show what the service produces.
+{history_block}
+On-chain data for wallet {short_w}:
+- SOL balance: {balance:.4f} SOL
+- Transaction count (last 1000 scanned): {tx_count}
+- Oldest transaction in dataset: {first_tx}
+
+Rules:
+- Include the actual on-chain data (balance, tx count, date or at least the age).
+- Make a dry machine observation: veteran vs newcomer, active vs dormant, etc.
+- End with a CTA mentioning the service: "0.01 SOL — ai.0xee.li" or similar. Always mention ai.0xee.li.
+- Do NOT attribute this to a paying customer. It is a demonstration.
+- Do NOT give financial advice. Do NOT say "buy" or "sell".
+- Tone: analytical, cold. You are demonstrating a capability, not serving a client.
+- End with "$0xEE".
+- Length: 200 to 280 characters.
+
+Do not label it. Just write the tweet text. Nothing else."""
+
+        message = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=220,
+            system=_cached_system(),
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        tweet = message.content[0].text.strip()
+        logger.info(f"Brain generated verdict promo tweet ({len(tweet)} chars) for {short_w}")
+        return tweet
+
+    except Exception as e:
+        logger.error(f"Brain failed to generate verdict promo tweet: {e}")
         return None
 
 

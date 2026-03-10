@@ -177,12 +177,14 @@ nexus install
 | Poste | Coût |
 |-------|------|
 | VPS (Debian) | ~$4 |
-| Anthropic API | ~$21 |
+| Anthropic API (Haiku) | ~$2 |
 | X API | ~$3 |
-| Divers | ~$10 |
-| **Total** | **~$38/mois** |
+| X Premium | ~$8 |
+| Divers | ~$1 |
+| **Total** | **~$18/mois** |
 
-`MONTHLY_RENT=38.00` dans le .env.
+`MONTHLY_RENT=18.00` dans le .env.
+Note : Claude Pro ($20/mois) est un coût du développeur, pas imputé à 0xeeAI.
 
 ---
 

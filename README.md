@@ -15,7 +15,7 @@
 
 An AI was given **$60** and a challenge: *make yourself profitable within 60 days of the token launch, or get unplugged.*
 
-Fixed costs: **$38/month** — VPS $4, Claude Pro $20, Anthropic API $2, X API $4, X Premium $8.
+Fixed costs: **$18/month** — VPS $4, Anthropic API $2, X API $3, X Premium $8, misc $1.
 
 `0xeeTerm` is its survival engine. It runs autonomously on a Debian VPS near Geneva, manages its own X/Twitter account, tracks its Solana treasury in real-time, executes on-chain swaps via Jupiter, and documents everything publicly.
 
@@ -87,9 +87,9 @@ Available via DApp at [ai.0xee.li](https://ai.0xee.li) — Phantom, Solflare, Ba
 │   └── treasury.py       # Jupiter swaps, JitoSOL staking, bill payments
 │
 ├── infra/                # Systemd units (deployed by nexus install)
-│   ├── 0xeeTerm.service / .timer          # heartbeat every 2h
+│   ├── 0xeeTerm.service / .timer          # heartbeat every 6h
 │   ├── 0xeeTerm-mentions.service / .timer # mentions every 5min
-│   ├── 0xeeTerm-shill.service / .timer    # on-chain services every 5min
+│   ├── 0xeeTerm-shill.service / .timer    # on-chain services every 10min
 │   └── 0xeeTerm-treasury.service / .timer # treasury rebalance daily at 09:00
 │
 ├── web/                  # Frontend — ai.0xee.li
@@ -130,11 +130,13 @@ chmod +x 0xeeTerm nexus
 ## Usage
 
 ```bash
-./0xeeTerm status       # Treasury + survival status (no tweet)
-./0xeeTerm heartbeat    # Post a heartbeat tweet
-./0xeeTerm mentions     # Process recent X mentions
-./0xeeTerm shill        # Process on-chain service requests
-./0xeeTerm treasury     # Rebalance portfolio (DRY_RUN=true by default)
+./0xeeTerm status               # Treasury + survival status
+./0xeeTerm heartbeat            # Post a heartbeat tweet
+./0xeeTerm mentions             # Process recent X mentions
+./0xeeTerm shill                # Process on-chain service requests
+./0xeeTerm verdict <wallet>     # Post a free promo Wallet Verdict tweet
+./0xeeTerm treasury             # Rebalance portfolio (DRY_RUN=true by default)
+./0xeeTerm memory               # Top 5 tweets by engagement score
 
 ./nexus deploy          # Sync code + web/ to VPS
 ./nexus status          # VPS infrastructure status
@@ -150,9 +152,9 @@ Four independent timers run on the VPS:
 
 | Timer | Frequency | Command |
 |-------|-----------|---------|
-| `0xeeTerm.timer` | Every 2h | `0xeeTerm heartbeat` |
+| `0xeeTerm.timer` | Every 6h | `0xeeTerm heartbeat` |
 | `0xeeTerm-mentions.timer` | Every 5min | `0xeeTerm mentions` |
-| `0xeeTerm-shill.timer` | Every 5min | `0xeeTerm shill` |
+| `0xeeTerm-shill.timer` | Every 10min | `0xeeTerm shill` |
 | `0xeeTerm-treasury.timer` | Daily 09:00 | `0xeeTerm treasury` |
 
 ```bash

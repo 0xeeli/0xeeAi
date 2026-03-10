@@ -24,16 +24,14 @@ def _get_rpc() -> str:
 
 
 def check_helius() -> dict:
-    """
-    Verify the Helius API key by making a lightweight getSlot call.
-    Returns {"configured": bool, "ok": bool, "rpc": str, "error": str|None}
-    """
+    """Verify the Helius API key with a getBalance call."""
     key = os.getenv("HELIUS_API_KEY")
     if not key:
         return {"configured": False, "ok": False, "rpc": _PUBLIC_RPC, "error": "HELIUS_API_KEY not set"}
     url = f"https://mainnet.helius-rpc.com/?api-key={key}"
     try:
-        r = requests.post(url, json={"jsonrpc": "2.0", "id": 1, "method": "getSlot", "params": []}, timeout=8)
+        wallet = os.getenv("SOLANA_WALLET", "11111111111111111111111111111111")
+        r = requests.post(url, json={"jsonrpc": "2.0", "id": 1, "method": "getBalance", "params": [wallet]}, timeout=8)
         data = r.json()
         if "error" in data:
             return {"configured": True, "ok": False, "rpc": url, "error": data["error"].get("message", str(data["error"]))}

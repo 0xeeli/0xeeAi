@@ -49,9 +49,11 @@ from modules.brain import (
     generate_heartbeat_tweet,
     generate_existential_tweet,
     generate_service_tweet,
+    generate_service_spotlight_tweet,
     generate_portfolio_tweet,
     generate_meta_tweet,
     generate_bounty_tweet,
+    generate_verdict_promo_tweet,
 )
 from modules.mentions import process_mentions
 from modules.shill import process_shills
@@ -142,7 +144,7 @@ def save_public_data(state: dict, status: dict, portfolio: dict = None):
         logger.info("public.json updated (logs/ only — REMOTE_WEB_DIR not set).")
 
 
-def should_post_heartbeat(state: dict, interval_hours: int = 2) -> bool:
+def should_post_heartbeat(state: dict, interval_hours: int = 6) -> bool:
     if not state.get("last_heartbeat"):
         return True
     last = datetime.fromisoformat(state["last_heartbeat"])
@@ -201,20 +203,23 @@ def run_heartbeat():
         tweet_history = state.get("tweet_history", [])
 
         # Weighted mode selection
-        # heartbeat 25% | existential 15% | service 22% | portfolio 18% | meta 10% | bounty 10%
+        # heartbeat 15% | existential 20% | spotlight 28% | service 10% | meta 10% | portfolio 7% | bounty 10%
+        _SERVICE_TYPES = ["toll", "genesis", "reply", "verdict"]
         roll = random.random()
-        if roll < 0.25:
+        if roll < 0.15:
             tweet_type = "heartbeat"
-        elif roll < 0.40:
+        elif roll < 0.35:
             tweet_type = "existential"
-        elif roll < 0.62:
+        elif roll < 0.63:
+            tweet_type = "spotlight"
+        elif roll < 0.73:
             tweet_type = "service"
-        elif roll < 0.80:
-            tweet_type = "portfolio"
-        elif roll < 0.90:
+        elif roll < 0.83:
             tweet_type = "meta"
+        elif roll < 0.90:
+            tweet_type = "portfolio"
         else:
-            tweet_type = "bounty" if should_post_bounty(state) else "heartbeat"
+            tweet_type = "bounty" if should_post_bounty(state) else "spotlight"
 
         logger.info(f"Tweet mode selected: {tweet_type}")
         status["tweets_posted"] = state.get("tweets_posted", 0)
@@ -223,6 +228,10 @@ def run_heartbeat():
             tweet_text = generate_heartbeat_tweet(status, tweet_history)
         elif tweet_type == "existential":
             tweet_text = generate_existential_tweet(tweet_history)
+        elif tweet_type == "spotlight":
+            svc = random.choice(_SERVICE_TYPES)
+            logger.info(f"Spotlight service: {svc}")
+            tweet_text = generate_service_spotlight_tweet(svc, tweet_history)
         elif tweet_type == "service":
             tweet_text = generate_service_tweet(tweet_history)
         elif tweet_type == "portfolio":
@@ -261,11 +270,26 @@ def run_heartbeat():
     save_public_data(state, status)
 
 
+def _load_cached_status() -> dict:
+    """Load survival status from public.json cache — avoids Helius call on every mentions cycle."""
+    public_file = Path(__file__).parent / "logs" / "public.json"
+    try:
+        if public_file.exists():
+            with open(public_file) as f:
+                data = json.load(f)
+            finance = data.get("finance", {})
+            if finance and finance.get("balance_usd") is not None:
+                return finance
+    except Exception:
+        pass
+    return get_survival_status()
+
+
 def run_mentions():
     """Fetch and reply to new mentions."""
     logger.info("Running mentions cycle...")
     state = load_state()
-    status = get_survival_status()
+    status = _load_cached_status()  # cached — no Helius call unless public.json missing
     since_id = state.get("last_mention_id")
 
     # Pass active bounty info if there is an unanswered bounty
@@ -397,6 +421,51 @@ def run_shill():
     process_shills()
 
 
+def run_verdict(wallet_addr: str):
+    """Post a free promo Wallet Verdict tweet for any Solana address (no paying customer)."""
+    from modules.shill import _get_wallet_info
+
+    logger.info(f"Fetching on-chain data for wallet {wallet_addr[:16]}...")
+    wallet_info = _get_wallet_info(wallet_addr)
+
+    state = load_state()
+    tweet_history = state.get("tweet_history", [])
+
+    tweet_text = generate_verdict_promo_tweet(wallet_info, tweet_history)
+    if not tweet_text:
+        print("  [ERROR] Brain failed to generate verdict tweet — check logs.")
+        return
+
+    print(f"\n  ─────────────────────────────────────")
+    print(f"  Wallet : {wallet_addr[:20]}...")
+    print(f"  Balance: {wallet_info['balance_sol']:.4f} SOL")
+    print(f"  Txs    : {wallet_info['tx_count']}")
+    print(f"  Since  : {wallet_info['first_tx_date']}")
+    print(f"  ─────────────────────────────────────")
+    print(f"  Tweet preview ({len(tweet_text)} chars):\n")
+    print(f"  {tweet_text.replace(chr(10), chr(10) + '  ')}")
+    print(f"\n  ─────────────────────────────────────")
+
+    confirm = input("  Post this tweet? (y/N) ").strip().lower()
+    if confirm != "y":
+        print("  Cancelled.")
+        return
+
+    result = post_tweet(tweet_text)
+    if result:
+        state["tweets_posted"] = state.get("tweets_posted", 0) + 1
+        history = state.get("tweet_history", [])
+        history.append(tweet_text)
+        state["tweet_history"] = history[-20:]
+        save_state(state)
+        status = get_survival_status()
+        save_public_data(state, status)
+        print(f"\n  Tweet posted — ID: {result['id']}")
+        logger.info(f"Verdict promo tweet posted — ID: {result['id']}")
+    else:
+        print("  Failed to post tweet — check logs.")
+
+
 def run_announce():
     """Post a one-shot announcement tweet without touching state."""
     tweet_text = (
@@ -447,6 +516,7 @@ def _help_short():
     print()
     print("  heartbeat   status    daemon    launch")
     print("  mentions    shill     memory    announce")
+    print("  verdict     <wallet>  — free promo verdict tweet")
     print()
     print("  ./0xeeTerm -h for full documentation.")
     print(f"{_RULE}\n")
@@ -477,6 +547,9 @@ def _help_full():
     print("    treasury           Run autonomous treasury cycle (portfolio, stake, bills)")
     print("    swap <from> <to> <amount>")
     print("                       Manual swap via Jupiter (tokens: sol, usdc, jitosol)")
+    print()
+    print("  PROMO")
+    print("    verdict <wallet>   Scan wallet on-chain, generate + post free promo verdict tweet")
     print()
     print("  OPTIONS")
     print("    -h, --help         Show this help message")
@@ -526,6 +599,11 @@ def main():
         run_announce()
     elif command == "treasury":
         run_treasury()
+    elif command == "verdict":
+        if len(argv) < 2:
+            print("  [ERROR] Usage: verdict <wallet_address>")
+            sys.exit(1)
+        run_verdict(argv[1])
     elif command == "swap":
         if len(argv) < 4:
             print("  [ERROR] Usage: swap <from> <to> <amount> [--now]  (e.g. swap sol usdc 0.004)")
