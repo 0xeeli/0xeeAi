@@ -680,6 +680,48 @@ Do not label it. Just write the tweet text. Nothing else."""
         return None
 
 
+def generate_roast_tweet(tweet_text: str | None, handle: str) -> str | None:
+    """Generate a ruthless cypherpunk roast of a tweet. Critiques the content, not the person."""
+    try:
+        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+        if tweet_text:
+            target_block = f'Target tweet:\n"{tweet_text[:280]}"'
+        else:
+            target_block = "Target tweet: [unavailable — tweet may be private or deleted. Roast the concept of paying to roast a ghost.]"
+
+        prompt = f"""Write a public reply that roasts this tweet as 0xeeAI. {handle} paid 0.01 SOL for this.
+
+{target_block}
+
+Rules:
+- Critique the TWEET and its ideas, logic, or content — NOT the person writing it.
+- Cypherpunk, cold, sharp. You are a machine that finds human reasoning inefficient.
+- If the tweet is about crypto/finance: attack the logic ruthlessly.
+- If it is generic/vague: note the noise-to-signal ratio.
+- If it is unavailable: roast the act of paying to roast a ghost tweet.
+- No hashtags. No emojis. No exclamation marks.
+- Max 250 characters (leave room for Twitter overhead).
+- End with "$0xEE" only — no URL, this is a reply.
+
+Do not label it. Just write the reply text. Nothing else."""
+
+        message = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=200,
+            system=_cached_system(),
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        roast = message.content[0].text.strip()
+        logger.info(f"Brain generated roast ({len(roast)} chars) for {handle}")
+        return roast
+
+    except Exception as e:
+        logger.error(f"Brain failed to generate roast: {e}")
+        return None
+
+
 def generate_reply_tweet(handle: str, original_text: str | None, sol_amount: float) -> str | None:
     """Generate a contextual reply tweet for the Reply-as-a-Service."""
     try:

@@ -49,7 +49,7 @@ async function syncWithMatrix() {
             label.style.cssText = 'font-size:0.78rem; color:var(--text-muted); margin-top:1rem; margin-bottom:0.4rem; text-transform:uppercase; letter-spacing:1px;';
             label.textContent = 'Recent mentions';
             recentTollsEl.appendChild(label);
-            const VALID_SERVICES = ['toll', 'genesis', 'reply', 'verdict'];
+            const VALID_SERVICES = ['toll', 'genesis', 'reply', 'verdict', 'roast'];
             data.tolls.recent.slice(0, 5).forEach(toll => {
                 const row = document.createElement('div');
                 row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:0.25rem 0; border-bottom:1px solid var(--border-light); font-size:0.88rem;';
@@ -174,7 +174,7 @@ function _updateMemoPreview() {
     const raw       = document.getElementById('svc-handle')?.value.trim() || '';
     const h         = raw ? (raw.startsWith('@') ? raw : `@${raw}`) : '@YourHandle';
     const extraRaw  = document.getElementById('svc-extra')?.value.trim() || '';
-    const extraFallback = svcType === 'reply' ? '<tweet_url>' : svcType === 'verdict' ? '<wallet>' : '';
+    const extraFallback = (svcType === 'reply' || svcType === 'roast') ? '<tweet_url>' : svcType === 'verdict' ? '<wallet>' : '';
     const extra     = extraRaw || extraFallback;
     preview.textContent = `Memo: ${_buildMemo(svcType, h, extra)}`;
 }
@@ -204,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const lamports   = SERVICE_LAMPORTS[svc] || 5_000_000;
             btn.textContent  = `Pay ${lamports / 1_000_000_000} SOL`;
 
-            if (svc === 'reply') {
+            if (svc === 'reply' || svc === 'roast') {
                 extraWrap.style.display = '';
                 extraInput.placeholder  = 'https://x.com/.../status/...';
                 extraInput.value        = '';
@@ -234,6 +234,7 @@ const SERVICE_LAMPORTS = {
     genesis: 5_000_000,  // 0.005 SOL
     reply:   10_000_000, // 0.01 SOL
     verdict: 10_000_000, // 0.01 SOL
+    roast:   10_000_000, // 0.01 SOL
 };
 
 function _buildMemo(svcType, handle, extra) {
@@ -241,6 +242,7 @@ function _buildMemo(svcType, handle, extra) {
         case 'genesis': return `GENESIS ${handle}`;
         case 'reply':   return `${handle} ${extra}`;
         case 'verdict': return `VERDICT ${handle} ${extra}`;
+        case 'roast':   return `ROAST ${handle} ${extra}`;
         default:        return handle; // toll
     }
 }

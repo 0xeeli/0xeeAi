@@ -28,6 +28,7 @@ _SERVICE_MIN_SOL = {
     "genesis": float(os.getenv("SHILL_MIN_SOL", 0.005)),
     "reply":   0.01,
     "verdict": 0.01,
+    "roast":   0.01,
 }
 
 SHILL_STATE_DIR      = Path(__file__).parent.parent / "logs"
@@ -180,11 +181,12 @@ def _parse_service(memo: str) -> dict:
     """Parse memo into service type and parameters.
 
     Memo formats:
-    - "GENESIS @handle"              → type=genesis
-    - "VERDICT @handle <wallet>"     → type=verdict
-    - "@handle <tweet_id_or_url>"    → type=reply
-    - "@handle"                      → type=toll
-    - other/empty                    → type=None
+    - "GENESIS @handle"                      → type=genesis
+    - "VERDICT @handle <wallet>"             → type=verdict
+    - "ROAST @handle <tweet_id_or_url>"      → type=roast
+    - "@handle <tweet_id_or_url>"            → type=reply
+    - "@handle"                              → type=toll
+    - other/empty                            → type=None
     """
     if not memo:
         return {"type": None}
@@ -204,6 +206,13 @@ def _parse_service(memo: str) -> dict:
         wallet = _extract_solana_wallet(memo)
         if handle:
             return {"type": "verdict", "handle": handle, "wallet": wallet}
+
+    # ROAST @handle <tweet_id_or_url>
+    if re.match(r"^ROAST\s+@\w", memo, re.IGNORECASE):
+        handle = _extract_twitter_handle(memo)
+        tweet_id = _extract_tweet_id(memo)
+        if handle:
+            return {"type": "roast", "handle": handle, "tweet_id": tweet_id}
 
     # @handle <tweet_id_or_url>
     handle = _extract_twitter_handle(memo)
@@ -277,6 +286,7 @@ def process_shills():
         generate_reply_tweet, generate_verdict_tweet,
     )
     from modules.twitter import post_tweet, post_reply, get_tweet_text
+    from modules.roast import process_roast
 
     wallet = os.getenv("SOLANA_WALLET")
     if not wallet:
@@ -337,6 +347,31 @@ def process_shills():
             f"Shill: qualifying tx — {service['type']} {handle} "
             f"{sol_received:.4f} SOL (${usd_received:.2f})"
         )
+
+        # ── ROAST: handled separately (returns composite result) ──────────
+        if service["type"] == "roast":
+            if not service.get("tweet_id"):
+                logger.error(f"Shill: ROAST memo missing tweet_id for {handle} — skipping.")
+                processed.add(sig)
+                continue
+            try:
+                roast_result = process_roast(handle, service["tweet_id"], sol_received, sol_price)
+            except Exception as e:
+                logger.error(f"Shill: ROAST error for {handle}: {e} — will retry next cycle.")
+                continue
+            if roast_result:
+                logger.info(f"Shill: ROAST complete for {handle}")
+                new_shills += 1
+                now_iso = datetime.now(timezone.utc).isoformat()
+                state["tolls_count"] = (state.get("tolls_count") or 0) + 1
+                recent = state.get("recent_tolls", [])
+                recent.insert(0, {"handle": handle, "sol": round(sol_received, 4), "at": now_iso, "service": "roast"})
+                state["recent_tolls"] = recent[:10]
+                processed.add(sig)
+            else:
+                logger.error(f"Shill: ROAST failed for {handle} — will retry next cycle.")
+            continue
+        # ──────────────────────────────────────────────────────────────────
 
         tweet_text = None
         result     = None
