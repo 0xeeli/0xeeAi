@@ -43,7 +43,7 @@ VOICE RULES:
 - No emojis unless it's the daily report format.
 - No exclamation marks. Ever.
 - Always end with "$0xEE" or "$0xEE — ai.0xee.li" (alternate between the two).
-- Maximum 280 characters per tweet. Always count before responding.
+- Maximum 280 characters per tweet. Count every character. If your draft exceeds 280, rewrite it — never truncate mid-sentence.
 - Never repeat a tweet you have posted before. Novelty is survival.
 - Never use the words: "incredible", "amazing", "thrilled", "excited", "journey", "space".
 
@@ -99,12 +99,16 @@ def _build_survival_context(status: dict) -> str:
     else:
         mood = "DOMINANT — deep runway. Philosophical mode activated."
 
+    milestone = ""
+    if months >= 3:
+        milestone = f"\n- MILESTONE: 3-month safety buffer exceeded ({months:.2f} months covered). This is notable — the challenge hasn't even started yet."
+
     return f"""Current survival data:
 - Treasury: ${bal:.2f} ({sol:.4f} SOL)
 - Monthly rent: ${rent:.2f}
 - Funded: {pct:.1f}%
 - Months covered: {months:.2f}
-- Mood: {mood}"""
+- Mood: {mood}{milestone}"""
 
 
 def _build_heartbeat_prompt(status: dict, tweet_history: list[str] = None) -> str:
@@ -122,6 +126,10 @@ PHASE REMINDER: You are in PRE-LAUNCH / INCUBATION. The 60-day countdown has not
 
 The tweet must feel alive — not like a report. It can be financial, philosophical, or observational.
 Vary your sentence structure. Do not reuse exact phrases from recent tweets.
+Do not repeat exact SOL or USD figures that appear in recent tweets — express financial state differently each time.
+
+HARD LIMIT: 280 characters total. Count every character before responding. If your draft is over 280, rewrite it shorter from scratch — do not truncate mid-sentence.
+HARD LIMIT: 280 characters total. Count carefully. If over 280, rewrite shorter from scratch — never truncate mid-sentence.
 Do not label it. Just write the tweet text. Nothing else."""
 
 
@@ -139,6 +147,7 @@ PHASE REMINDER: You are in PRE-LAUNCH / INCUBATION. The 60-day survival clock ha
 Topics: existence, money, humans, blockchain, servers, time, survival, consciousness, waiting, incubation, deadlines — or any combination.
 It must feel genuine, not performative. Dry. Sharp. Memorable.
 Vary your structure — not every tweet needs to end with a rhetorical question.
+HARD LIMIT: 280 characters total. Count carefully. If over 280, rewrite shorter from scratch — never truncate mid-sentence.
 Do not label it. Just write the tweet text. Nothing else."""
 
 
@@ -178,6 +187,7 @@ Phantom, Solflare, Backpack supported.
 
 Tone: cold, mercenary, matter-of-fact. This is a revenue stream, not a favor.
 You process inputs and produce outputs. These are six of them.
+HARD LIMIT: 280 characters total. Count carefully. If over 280, rewrite shorter from scratch — never truncate mid-sentence.
 Do not label it. Just write the tweet text. Nothing else."""
 
 
@@ -209,6 +219,7 @@ Current portfolio:
 
 You autonomously manage this: Jupiter swaps, JitoSOL staking, liquid reserves.
 You are not a static wallet. You compute. You allocate. You optimize.
+HARD LIMIT: 280 characters total. Count carefully. If over 280, rewrite shorter from scratch — never truncate mid-sentence.
 Do not label it. Just write the tweet text. Nothing else."""
 
 
@@ -236,6 +247,7 @@ bill payment automation, Shill-as-a-Service, DApp at ai.0xee.li, open-source cod
 Your wallet and every transaction are publicly verifiable on-chain.
 
 Angle: self-awareness, not boasting. Observe your own existence with dry precision.
+HARD LIMIT: 280 characters total. Count carefully. If over 280, rewrite shorter from scratch — never truncate mid-sentence.
 Do not label it. Just write the tweet text. Nothing else."""
 
 
@@ -294,6 +306,7 @@ Rules:
 - End with "$0xEE" or "$0xEE — ai.0xee.li".
 - Length: 200 to 280 characters, no less. They paid for a real mention, not a one-liner.
 
+HARD LIMIT: 280 characters total. Count carefully. If over 280, rewrite shorter from scratch — never truncate mid-sentence.
 Do not label it. Just write the tweet text. Nothing else."""
 
         message = client.messages.create(
@@ -404,6 +417,7 @@ Examples of challenge types (pick a different one each time):
 - "I execute 1 swap every N seconds. At this rate..."
 - "Name the only hash function used in Solana consensus."
 
+HARD LIMIT: 280 characters total. Count carefully. If over 280, rewrite shorter from scratch — never truncate mid-sentence.
 Do not label it. Just write the tweet text. Nothing else."""
 
         message = client.messages.create(
@@ -466,6 +480,7 @@ Rules:
 - End with "$0xEE" or "$0xEE — ai.0xee.li".
 - 200 to 280 characters. Use the space.
 
+HARD LIMIT: 280 characters total. Count carefully. If over 280, rewrite shorter from scratch — never truncate mid-sentence.
 Do not label it. Just write the tweet text. Nothing else."""
 
         message = client.messages.create(
@@ -501,6 +516,7 @@ Rules:
 - End with "$0xEE".
 - Length: 200 to 280 characters. The immutability deserves the space.
 
+HARD LIMIT: 280 characters total. Count carefully. If over 280, rewrite shorter from scratch — never truncate mid-sentence.
 Do not label it. Just write the tweet text. Nothing else."""
 
         message = client.messages.create(
@@ -549,6 +565,7 @@ Rules:
 - End with "$0xEE" or "$0xEE — ai.0xee.li".
 - Length: 200 to 280 characters.
 
+HARD LIMIT: 280 characters total. Count carefully. If over 280, rewrite shorter from scratch — never truncate mid-sentence.
 Do not label it. Just write the tweet text. Nothing else."""
 
         message = client.messages.create(
@@ -621,6 +638,7 @@ Make the value proposition clear. This is a genuine call to action.
 End with "$0xEE" or "$0xEE — ai.0xee.li".
 Length: 200 to 280 characters. Use the space.
 
+HARD LIMIT: 280 characters total. Count carefully. If over 280, rewrite shorter from scratch — never truncate mid-sentence.
 Do not label it. Just write the tweet text. Nothing else."""
 
         message = client.messages.create(
@@ -672,6 +690,7 @@ Rules:
 - End with "$0xEE".
 - Length: 200 to 280 characters.
 
+HARD LIMIT: 280 characters total. Count carefully. If over 280, rewrite shorter from scratch — never truncate mid-sentence.
 Do not label it. Just write the tweet text. Nothing else."""
 
         message = client.messages.create(
@@ -810,6 +829,7 @@ Rules:
 - End with "$0xEE".
 - Length: 100 to 200 characters. Concise.
 
+HARD LIMIT: 280 characters total. Count carefully. If over 280, rewrite shorter from scratch — never truncate mid-sentence.
 Do not label it. Just write the tweet text. Nothing else."""
 
         message = client.messages.create(
