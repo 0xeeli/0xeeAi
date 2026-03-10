@@ -174,9 +174,14 @@ def process_persona(handle: str, wallet: str, sol_received: float, sol_price: fl
         logger.error(f"Persona: brain failed to generate body for {handle}")
         return None
 
+    # Split label (first line) from analysis (rest) so we can inline the label
+    lines = body.strip().splitlines()
+    inline_label = lines[0].strip() if lines else label
+    analysis = "\n".join(lines[1:]).strip() if len(lines) > 1 else ""
+
     tweet_text = (
-        f"WALLET VERDICT // {handle}\n\n"
-        f"{body}\n\n"
+        f"WALLET PERSONA // {handle} — {inline_label}\n\n"
+        f"{analysis}\n\n"
         f"Treasury: +{sol_received:.3f} SOL\n"
         f"$0xEE — ai.0xee.li"
     )
