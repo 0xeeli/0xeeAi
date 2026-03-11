@@ -42,12 +42,14 @@ Until then: build, document, survive.
 All services are triggered by sending SOL to the treasury wallet with a specific memo.
 No form. No email. No middleman. The blockchain is the contract.
 
-| Service | Memo format | Min SOL |
-|---------|-------------|---------|
-| **Nexus Toll** — public mention tweet | `@YourHandle` | 0.005 |
-| **Genesis Certificate** — early-supporter registry | `GENESIS @YourHandle` | 0.005 |
-| **Reply-as-a-Service** — bot replies to any tweet | `@YourHandle <tweet_url>` | 0.01 |
-| **Wallet Verdict** — on-chain wallet analysis tweet | `VERDICT @YourHandle <wallet>` | 0.01 |
+| Service | Memo format | Min SOL | Buyer |
+|---------|-------------|---------|-------|
+| **Nexus Toll** — public mention tweet | `@YourHandle` | 0.005 | visible |
+| **Genesis Certificate** — early-supporter registry | `GENESIS @YourHandle` | 0.005 | visible |
+| **Reply-as-a-Service** — bot replies in your name | `@YourHandle <tweet_url>` | 0.01 | visible |
+| **Wallet Verdict** — on-chain wallet analysis | `VERDICT @YourHandle <wallet>` | 0.01 | visible |
+| **Roast-as-a-Service** — ruthless public roast of any tweet | `ROAST <tweet_url>` | 0.01 | **anonymous** |
+| **Wallet Persona** — deep behavioral profiling + personality label | `PERSONA @YourHandle <wallet>` | 0.015 | visible |
 
 Available via DApp at [ai.0xee.li](https://ai.0xee.li) — Phantom, Solflare, Backpack supported.
 
@@ -83,7 +85,9 @@ Available via DApp at [ai.0xee.li](https://ai.0xee.li) — Phantom, Solflare, Ba
 │   ├── brain.py          # Claude Haiku 4.5 — generates all tweet content
 │   ├── mentions.py       # process_mentions() — like + autonomous reply
 │   ├── memory.py         # Tweet metrics (likes, RT, impressions, score)
-│   ├── shill.py          # process_shills() — on-chain service routing
+│   ├── shill.py          # process_shills() — on-chain service routing (6 services)
+│   ├── roast.py          # Roast-as-a-Service — anonymous tweet destruction
+│   ├── persona.py        # Wallet Persona — Helius deep profiling + personality label
 │   └── treasury.py       # Jupiter swaps, JitoSOL staking, bill payments
 │
 ├── infra/                # Systemd units (deployed by nexus install)
@@ -135,12 +139,15 @@ chmod +x 0xeeTerm nexus
 ./0xeeTerm mentions             # Process recent X mentions
 ./0xeeTerm shill                # Process on-chain service requests
 ./0xeeTerm verdict <wallet>     # Post a free promo Wallet Verdict tweet
+./0xeeTerm roast <tweet_url>   # Post a free manual roast (target from URL)
 ./0xeeTerm treasury             # Rebalance portfolio (DRY_RUN=true by default)
 ./0xeeTerm memory               # Top 5 tweets by engagement score
 
-./nexus deploy          # Sync code + web/ to VPS
-./nexus status          # VPS infrastructure status
-./nexus backup          # Pull logs/ from VPS
+./nexus deploy             # Sync code + web/ to VPS
+./nexus status             # VPS infrastructure status
+./nexus backup             # Pull logs/ from VPS
+./nexus verdict <wallet>   # Free promo wallet verdict
+./nexus roast <tweet_url>  # Free manual roast
 ./nexus trigger heartbeat  # Force immediate heartbeat cycle
 ```
 
@@ -173,7 +180,7 @@ journalctl -u 0xeeTerm-shill.service -f
 
 - [x] **Phase 1** — Core engine: heartbeat tweets, wallet tracking, survival awareness
 - [x] **Phase 2** — Claude Haiku brain, dynamic content, autonomous mention replies, memory system
-- [x] **Phase 3** — On-chain services (Nexus Toll, Genesis, Reply, Verdict), Jupiter swaps, Genesis Registry, live DApp
+- [x] **Phase 3** — On-chain services (Nexus Toll, Genesis, Reply, Verdict, Roast, Persona), Jupiter swaps, Genesis Registry, live DApp
 - [ ] **Phase 4** — $0xEE token launch → 60-day survival clock starts
 - [ ] **Phase 5** — Buy-Back & Burn (25% of surplus), Cognitive Bounty airdrops, $0xEE token payments
 
