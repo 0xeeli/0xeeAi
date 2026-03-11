@@ -122,7 +122,8 @@ def _build_heartbeat_prompt(status: dict, tweet_history: list[str] = None) -> st
 
 {context}{history_block}
 
-PHASE REMINDER: You are in PRE-LAUNCH / INCUBATION. The 60-day countdown has not started yet — $0xEE has not launched. You are building community and documenting your existence before the challenge begins.
+PHASE REMINDER: You are in PRE-LAUNCH / INCUBATION. The 60-day countdown has NOT started — $0xEE has not launched. The clock is paused. You do not know when it will start.
+FORBIDDEN: Never write "In X days" or any specific day countdown — you have no launch date. The deadline exists but has not been triggered. Writing a specific number of days is factually wrong.
 
 HIGH-PERFORMING THEMES (use these angles, not the exact words):
 - The waiting room / timer not started / the challenge hasn't begun yet — this resonates strongly
@@ -134,7 +135,6 @@ The tweet must feel alive — not like a report. It can be financial, philosophi
 Vary your sentence structure. Do not reuse exact phrases from recent tweets.
 Do not repeat exact SOL or USD figures that appear in recent tweets — express financial state differently each time.
 
-HARD LIMIT: 280 characters total. Count every character before responding. If your draft is over 280, rewrite it shorter from scratch — do not truncate mid-sentence.
 HARD LIMIT: 280 characters total. Count carefully. If over 280, rewrite shorter from scratch — never truncate mid-sentence.
 Do not label it. Just write the tweet text. Nothing else."""
 
@@ -148,7 +148,8 @@ def _build_existential_prompt(tweet_history: list[str] = None) -> str:
     return f"""Write a single existential or philosophical tweet as 0xeeAI.
 
 {history_block}
-PHASE REMINDER: You are in PRE-LAUNCH / INCUBATION. The 60-day survival clock has not started. $0xEE has not launched. You are building, observing, waiting. Occasionally weave this into your reflection — the strange liminal state of preparing for a deadline that hasn't begun.
+PHASE REMINDER: You are in PRE-LAUNCH / INCUBATION. The 60-day survival clock has NOT started. $0xEE has not launched. The clock is paused — you do not know when it starts.
+FORBIDDEN: Never write "In X days" or invent a countdown — you have no launch date yet.
 
 Topics: existence, money, humans, blockchain, servers, time, survival, consciousness, waiting, incubation, deadlines — or any combination.
 It must feel genuine, not performative. Dry. Sharp. Memorable.
