@@ -786,7 +786,7 @@ Raw on-chain metrics:
 
 Write exactly two things, in this format:
 Line 1: the personality label in ALL CAPS (e.g. "{label}")
-Line 2-3: exactly 2 short sentences of cold machine analysis — dry, clinical, based on the actual data above. Reference specific numbers. No financial advice.
+Line 2-3: exactly 2 short sentences of cold machine analysis — dry, clinical, based on the actual data above. Reference specific numbers and mention the wallet {short_w}. No financial advice.
 
 Rules:
 - Total output: label + 2 sentences = max 200 characters (this is embedded in a larger tweet)
