@@ -435,10 +435,16 @@ def run_verdict(wallet_addr: str):
     state = load_state()
     tweet_history = state.get("tweet_history", [])
 
-    tweet_text = generate_verdict_promo_tweet(wallet_info, tweet_history)
-    if not tweet_text:
+    body = generate_verdict_promo_tweet(wallet_info, tweet_history)
+    if not body:
         print("  [ERROR] Brain failed to generate verdict tweet — check logs.")
         return
+    tweet_text = (
+        f"WALLET VERDICT\n\n"
+        f"{body}\n\n"
+        f"Wallet Verdict — 0.01 SOL — ai.0xee.li\n"
+        f"$0xEE"
+    )
 
     print(f"\n  ─────────────────────────────────────")
     print(f"  Wallet : {wallet_addr[:20]}...")

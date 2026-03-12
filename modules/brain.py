@@ -543,7 +543,7 @@ Do not label it. Just write the tweet text. Nothing else."""
 
 
 def generate_verdict_tweet(handle: str, wallet_info: dict) -> str | None:
-    """Generate a Wallet Verdict tweet with on-chain data analysis."""
+    """Generate the body of a Wallet Verdict tweet — analysis only, no header/footer."""
     try:
         client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
@@ -556,40 +556,36 @@ def generate_verdict_tweet(handle: str, wallet_info: dict) -> str | None:
         txs_per_day = wallet_info.get("txs_per_day", 0.0)
         short_w   = wallet[:8] + "..." if len(wallet) > 8 else wallet
 
-        prompt = f"""{handle} requested an on-chain verdict for wallet {short_w}.
+        prompt = f"""Write the analysis body for a Wallet Verdict on {short_w} (requested by {handle}).
 
-On-chain data retrieved:
+On-chain data:
 - SOL balance: {balance:.4f} SOL
 - Transactions scanned (max 1000): {tx_count}
-- Wallet age (oldest tx in sample): {age_days} days (since {first_tx})
+- Wallet age: {age_days} days (since {first_tx})
 - Last tx: {last_tx}
 - Tx frequency: {txs_per_day} txs/day
 
-Write a single tweet delivering your machine verdict on this wallet.
-
 Rules:
-- Tone: analytical, cold, machine judgment. You are a scanning process, not a human.
-- Include the actual on-chain data in the tweet (balance, tx frequency, wallet age).
-- Mention {handle} — they paid for this verdict.
-- Reference the short wallet address {short_w}.
-- Classify based on tx frequency and age: e.g. high txs/day + new wallet = likely bot/farmer; low txs + old = dormant holder; etc.
+- Start directly with the data: "{short_w}: X SOL, ..." or similar
+- Include balance, tx frequency, wallet age in compact form
+- Classify based on frequency and age: high txs/day + new wallet = likely bot/farmer; low txs + old = dormant holder; etc.
+- Tone: cold, analytical, machine precision. 1-3 short sentences.
+- Do NOT include @{handle}, header, "$0xEE", "Treasury:", or any footer — those are added separately
 - Do NOT give financial advice. Do NOT say "buy" or "sell".
-- End with "$0xEE" or "$0xEE — ai.0xee.li".
-- Length: 200 to 280 characters.
+- HARD LIMIT: 180 characters. Count carefully.
 
-HARD LIMIT: 280 characters total. Count carefully. If over 280, rewrite shorter from scratch — never truncate mid-sentence.
-Do not label it. Just write the tweet text. Nothing else."""
+Do not label it. Just write the analysis body. Nothing else."""
 
         message = client.messages.create(
             model="claude-haiku-4-5",
-            max_tokens=220,
+            max_tokens=120,
             system=_cached_system(),
             messages=[{"role": "user", "content": prompt}],
         )
 
-        tweet = message.content[0].text.strip()
-        logger.info(f"Brain generated verdict tweet ({len(tweet)} chars) for {handle}")
-        return tweet
+        body = message.content[0].text.strip()
+        logger.info(f"Brain generated verdict body ({len(body)} chars) for {handle}")
+        return body
 
     except Exception as e:
         logger.error(f"Brain failed to generate verdict tweet: {e}")
@@ -670,7 +666,7 @@ Do not label it. Just write the tweet text. Nothing else."""
 
 
 def generate_verdict_promo_tweet(wallet_info: dict, tweet_history: list[str] = None) -> str | None:
-    """Generate a free promo Wallet Verdict tweet — demonstrates the service, no paying customer."""
+    """Generate the analysis body for a promo Wallet Verdict — no paying customer."""
     history_block = ""
     if tweet_history:
         recent = "\n".join(f"- {t}" for t in tweet_history[-5:])
@@ -688,38 +684,36 @@ def generate_verdict_promo_tweet(wallet_info: dict, tweet_history: list[str] = N
     try:
         client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
-        prompt = f"""Write a single Wallet Verdict tweet that demonstrates the service. This is a promo — no paying customer, just a free scan to show what the service produces.
+        prompt = f"""Write the analysis body for a Wallet Verdict demonstration on {short_w}. This is a promo — no paying customer.
 {history_block}
-On-chain data for wallet {short_w}:
+On-chain data:
 - SOL balance: {balance:.4f} SOL
 - Transactions scanned (max 1000): {tx_count}
-- Wallet age (oldest tx in sample): {age_days} days (since {first_tx})
+- Wallet age: {age_days} days (since {first_tx})
 - Last tx: {last_tx}
 - Tx frequency: {txs_per_day} txs/day
 
 Rules:
-- Include the actual on-chain data (balance, tx frequency, wallet age).
+- Start directly with the data: "{short_w}: X SOL, ..." or similar
+- Include balance, tx frequency, wallet age in compact form
 - Classify based on frequency and age: high txs/day + new wallet = likely bot/farmer; low txs + old = dormant holder; etc.
-- End with a CTA mentioning the service: "0.01 SOL — ai.0xee.li" or similar. Always mention ai.0xee.li.
-- Do NOT attribute this to a paying customer. It is a demonstration.
+- Tone: analytical, cold, demonstrating a capability
+- Do NOT include any header, "$0xEE", "Treasury:", or footer — those are added separately
 - Do NOT give financial advice. Do NOT say "buy" or "sell".
-- Tone: analytical, cold. You are demonstrating a capability, not serving a client.
-- End with "$0xEE".
-- Length: 200 to 280 characters.
+- HARD LIMIT: 200 characters. Count carefully.
 
-HARD LIMIT: 280 characters total. Count carefully. If over 280, rewrite shorter from scratch — never truncate mid-sentence.
-Do not label it. Just write the tweet text. Nothing else."""
+Do not label it. Just write the analysis body. Nothing else."""
 
         message = client.messages.create(
             model="claude-haiku-4-5",
-            max_tokens=220,
+            max_tokens=140,
             system=_cached_system(),
             messages=[{"role": "user", "content": prompt}],
         )
 
-        tweet = message.content[0].text.strip()
-        logger.info(f"Brain generated verdict promo tweet ({len(tweet)} chars) for {short_w}")
-        return tweet
+        body = message.content[0].text.strip()
+        logger.info(f"Brain generated verdict promo body ({len(body)} chars) for {short_w}")
+        return body
 
     except Exception as e:
         logger.error(f"Brain failed to generate verdict promo tweet: {e}")

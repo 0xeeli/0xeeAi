@@ -449,8 +449,14 @@ def process_shills():
 
             elif service["type"] == "verdict":
                 wallet_info = _get_wallet_info(service.get("wallet") or "")
-                tweet_text  = generate_verdict_tweet(handle, wallet_info)
-                if tweet_text:
+                body = generate_verdict_tweet(handle, wallet_info)
+                if body:
+                    tweet_text = (
+                        f"WALLET VERDICT // {handle}\n\n"
+                        f"{body}\n\n"
+                        f"Treasury: +{sol_received:.3f} SOL\n"
+                        f"$0xEE — ai.0xee.li"
+                    )
                     result = post_tweet(tweet_text)
 
         except Exception as e:
