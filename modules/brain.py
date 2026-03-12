@@ -547,27 +547,32 @@ def generate_verdict_tweet(handle: str, wallet_info: dict) -> str | None:
     try:
         client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
-        wallet   = wallet_info.get("wallet", "unknown")
-        balance  = wallet_info.get("balance_sol", 0.0)
-        tx_count = wallet_info.get("tx_count", 0)
-        first_tx = wallet_info.get("first_tx_date", "unknown")
-        short_w  = wallet[:8] + "..." if len(wallet) > 8 else wallet
+        wallet    = wallet_info.get("wallet", "unknown")
+        balance   = wallet_info.get("balance_sol", 0.0)
+        tx_count  = wallet_info.get("tx_count", 0)
+        first_tx  = wallet_info.get("first_tx_date", "unknown")
+        last_tx   = wallet_info.get("last_tx_date", "unknown")
+        age_days  = wallet_info.get("wallet_age_days", 0)
+        txs_per_day = wallet_info.get("txs_per_day", 0.0)
+        short_w   = wallet[:8] + "..." if len(wallet) > 8 else wallet
 
         prompt = f"""{handle} requested an on-chain verdict for wallet {short_w}.
 
 On-chain data retrieved:
 - SOL balance: {balance:.4f} SOL
-- Transaction count (last 1000 scanned): {tx_count}
-- Oldest transaction in dataset: {first_tx}
+- Transactions scanned (max 1000): {tx_count}
+- Wallet age (oldest tx in sample): {age_days} days (since {first_tx})
+- Last tx: {last_tx}
+- Tx frequency: {txs_per_day} txs/day
 
 Write a single tweet delivering your machine verdict on this wallet.
 
 Rules:
 - Tone: analytical, cold, machine judgment. You are a scanning process, not a human.
-- Include the actual on-chain data in the tweet (balance, tx count, and/or date).
+- Include the actual on-chain data in the tweet (balance, tx frequency, wallet age).
 - Mention {handle} — they paid for this verdict.
 - Reference the short wallet address {short_w}.
-- Make a dry observation based on the data — veteran vs newcomer, active vs dormant, etc.
+- Classify based on tx frequency and age: e.g. high txs/day + new wallet = likely bot/farmer; low txs + old = dormant holder; etc.
 - Do NOT give financial advice. Do NOT say "buy" or "sell".
 - End with "$0xEE" or "$0xEE — ai.0xee.li".
 - Length: 200 to 280 characters.
@@ -671,11 +676,14 @@ def generate_verdict_promo_tweet(wallet_info: dict, tweet_history: list[str] = N
         recent = "\n".join(f"- {t}" for t in tweet_history[-5:])
         history_block = f"\nRECENT TWEETS (avoid these themes):\n{recent}\n"
 
-    wallet   = wallet_info.get("wallet", "unknown")
-    balance  = wallet_info.get("balance_sol", 0.0)
-    tx_count = wallet_info.get("tx_count", 0)
-    first_tx = wallet_info.get("first_tx_date", "unknown")
-    short_w  = wallet[:8] + "..." if len(wallet) > 8 else wallet
+    wallet      = wallet_info.get("wallet", "unknown")
+    balance     = wallet_info.get("balance_sol", 0.0)
+    tx_count    = wallet_info.get("tx_count", 0)
+    first_tx    = wallet_info.get("first_tx_date", "unknown")
+    last_tx     = wallet_info.get("last_tx_date", "unknown")
+    age_days    = wallet_info.get("wallet_age_days", 0)
+    txs_per_day = wallet_info.get("txs_per_day", 0.0)
+    short_w     = wallet[:8] + "..." if len(wallet) > 8 else wallet
 
     try:
         client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
@@ -684,12 +692,14 @@ def generate_verdict_promo_tweet(wallet_info: dict, tweet_history: list[str] = N
 {history_block}
 On-chain data for wallet {short_w}:
 - SOL balance: {balance:.4f} SOL
-- Transaction count (last 1000 scanned): {tx_count}
-- Oldest transaction in dataset: {first_tx}
+- Transactions scanned (max 1000): {tx_count}
+- Wallet age (oldest tx in sample): {age_days} days (since {first_tx})
+- Last tx: {last_tx}
+- Tx frequency: {txs_per_day} txs/day
 
 Rules:
-- Include the actual on-chain data (balance, tx count, date or at least the age).
-- Make a dry machine observation: veteran vs newcomer, active vs dormant, etc.
+- Include the actual on-chain data (balance, tx frequency, wallet age).
+- Classify based on frequency and age: high txs/day + new wallet = likely bot/farmer; low txs + old = dormant holder; etc.
 - End with a CTA mentioning the service: "0.01 SOL — ai.0xee.li" or similar. Always mention ai.0xee.li.
 - Do NOT attribute this to a paying customer. It is a demonstration.
 - Do NOT give financial advice. Do NOT say "buy" or "sell".

@@ -246,10 +246,13 @@ def _parse_service(memo: str) -> dict:
 def _get_wallet_info(wallet: str) -> dict:
     """Fetch basic on-chain info for a Solana wallet address."""
     result = {
-        "wallet":       wallet,
-        "balance_sol":  0.0,
-        "tx_count":     0,
+        "wallet":        wallet,
+        "balance_sol":   0.0,
+        "tx_count":      0,
         "first_tx_date": "unknown",
+        "last_tx_date":  "unknown",
+        "wallet_age_days": 0,
+        "txs_per_day":   0.0,
     }
     if not wallet:
         return result
@@ -274,10 +277,18 @@ def _get_wallet_info(wallet: str) -> dict:
         sigs = r.json().get("result", [])
         result["tx_count"] = len(sigs)
         if sigs:
-            oldest = sigs[-1]
-            if oldest.get("blockTime"):
-                dt = datetime.fromtimestamp(oldest["blockTime"], tz=timezone.utc)
+            now = datetime.now(timezone.utc)
+            # Most recent tx
+            if sigs[0].get("blockTime"):
+                dt = datetime.fromtimestamp(sigs[0]["blockTime"], tz=timezone.utc)
+                result["last_tx_date"] = dt.strftime("%Y-%m-%d")
+            # Oldest tx in sample
+            if sigs[-1].get("blockTime"):
+                dt = datetime.fromtimestamp(sigs[-1]["blockTime"], tz=timezone.utc)
                 result["first_tx_date"] = dt.strftime("%Y-%m-%d")
+                age_days = max((now - dt).days, 1)
+                result["wallet_age_days"] = age_days
+                result["txs_per_day"] = round(len(sigs) / age_days, 1)
     except Exception as e:
         logger.error(f"Shill: _get_wallet_info sigs error for {wallet[:16]}...: {e}")
 
