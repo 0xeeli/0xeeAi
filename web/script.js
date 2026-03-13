@@ -19,8 +19,7 @@ async function syncWithMatrix() {
         const data = await response.json();
         console.log("[0xeeAI] Données reçues :", data);
 
-        // Capture RPC URL served by backend (Helius key never in git)
-        if (data.rpc_url) _rpcUrl = data.rpc_url;
+        // RPC URL no longer served from public.json (key removed for security)
 
         // ==========================================
         // 1. MISE À JOUR DU DASHBOARD (index.html)
@@ -230,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==========================================
 // ON-CHAIN SERVICES — Web3 DApp payment
 // ==========================================
-const TREASURY_WALLET = "4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr";
+const TREASURY_WALLET = "2qeqqqFMrEfSCba3WSREXqAsRG83x4ugFEMta9yFwZhS";
 const MEMO_PROGRAM_ID  = "Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo"; // SPL Memo v1
 
 const SERVICE_LAMPORTS = {

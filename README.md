@@ -7,7 +7,7 @@
 [![X Follow](https://img.shields.io/twitter/follow/0xeeAi?style=flat&logo=x&label=%400xeeAi&color=000000)](https://x.com/0xeeAi)
 [![Live Dashboard](https://img.shields.io/badge/Dashboard-ai.0xee.li-brightgreen?style=flat)](https://ai.0xee.li)
 [![Genesis Registry](https://img.shields.io/badge/Genesis-Registry-FFD700?style=flat)](https://ai.0xee.li/genesis.html)
-[![Solana](https://img.shields.io/badge/Chain-Solana-9945FF?style=flat&logo=solana)](https://solscan.io/account/4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr)
+[![Solana](https://img.shields.io/badge/Chain-Solana-9945FF?style=flat&logo=solana)](https://solscan.io/account/2qeqqqFMrEfSCba3WSREXqAsRG83x4ugFEMta9yFwZhS)
 
 ---
 
@@ -53,7 +53,7 @@ No form. No email. No middleman. The blockchain is the contract.
 
 Available via DApp at [ai.0xee.li](https://ai.0xee.li) — Phantom, Solflare, Backpack supported.
 
-**Treasury:** [`4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr`](https://solscan.io/account/4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr)
+**Treasury:** [`2qeqqqFMrEfSCba3WSREXqAsRG83x4ugFEMta9yFwZhS`](https://solscan.io/account/2qeqqqFMrEfSCba3WSREXqAsRG83x4ugFEMta9yFwZhS)
 
 ---
 

@@ -50,7 +50,6 @@ from modules.brain import (
     generate_existential_tweet,
     generate_service_tweet,
     generate_service_spotlight_tweet,
-    generate_portfolio_tweet,
     generate_meta_tweet,
     generate_bounty_tweet,
     generate_verdict_promo_tweet,
@@ -58,7 +57,7 @@ from modules.brain import (
 from modules.mentions import process_mentions
 from modules.shill import process_shills
 from modules.memory import save_tweet as memory_save, update_all_metrics, get_top_performers
-from modules.treasury import auto_treasury, get_portfolio, manual_swap, get_quote, TOKENS, MINT_DECIMALS, MINT_SYMBOLS
+from modules.treasury import get_portfolio, sweep_to_devfund
 
 # State file to track last actions
 STATE_FILE = Path(__file__).parent / "logs" / "state.json"
@@ -109,9 +108,6 @@ def _load_genesis_registry() -> list:
 
 def save_public_data(state: dict, status: dict, portfolio: dict = None):
     """Export live data for ai.0xee.li frontend."""
-    helius_key = os.getenv("HELIUS_API_KEY")
-    rpc_url = f"https://mainnet.helius-rpc.com/?api-key={helius_key}" if helius_key else None
-
     shill   = _load_shill_state()
     genesis = _load_genesis_registry()
     public_data = {
@@ -122,7 +118,6 @@ def save_public_data(state: dict, status: dict, portfolio: dict = None):
         "tweets_posted": state.get("tweets_posted", 0),
         "tolls":         {"count": shill.get("tolls_count", 0), "recent": shill.get("recent_tolls", [])},
         "genesis":       {"count": len(genesis), "holders": genesis},
-        "rpc_url":       rpc_url,
     }
     # Always write to logs/
     public_file = Path(__file__).parent / "logs" / "public.json"
@@ -203,21 +198,19 @@ def run_heartbeat():
         tweet_history = state.get("tweet_history", [])
 
         # Weighted mode selection
-        # heartbeat 15% | existential 20% | spotlight 28% | service 10% | meta 10% | portfolio 7% | bounty 10%
+        # heartbeat 15% | existential 27% | spotlight 28% | service 10% | meta 10% | bounty 10%
         _SERVICE_TYPES = ["toll", "genesis", "reply", "verdict"]
         roll = random.random()
         if roll < 0.15:
             tweet_type = "heartbeat"
-        elif roll < 0.35:
+        elif roll < 0.42:
             tweet_type = "existential"
-        elif roll < 0.63:
+        elif roll < 0.70:
             tweet_type = "spotlight"
-        elif roll < 0.73:
+        elif roll < 0.80:
             tweet_type = "service"
-        elif roll < 0.83:
-            tweet_type = "meta"
         elif roll < 0.90:
-            tweet_type = "portfolio"
+            tweet_type = "meta"
         else:
             tweet_type = "bounty" if should_post_bounty(state) else "spotlight"
 
@@ -234,8 +227,6 @@ def run_heartbeat():
             tweet_text = generate_service_spotlight_tweet(svc, tweet_history)
         elif tweet_type == "service":
             tweet_text = generate_service_tweet(tweet_history)
-        elif tweet_type == "portfolio":
-            tweet_text = generate_portfolio_tweet(status, tweet_history)
         elif tweet_type == "meta":
             top = get_top_performers(3)
             tweet_text = generate_meta_tweet(top, status, tweet_history)
@@ -353,66 +344,6 @@ def run_daemon(interval_minutes: int = 30):
         except Exception as e:
             logger.error(f"Heartbeat error: {e}")
         time.sleep(interval_minutes * 60)
-
-
-def run_swap(from_token: str, to_token: str, amount: float, execute: bool = False):
-    """
-    Show a Jupiter quote for the swap.
-    With execute=True (--now): prompt for confirmation, then execute live.
-    """
-    from_token = from_token.lower()
-    to_token   = to_token.lower()
-
-    if from_token not in TOKENS or to_token not in TOKENS:
-        valid = ", ".join(TOKENS)
-        print(f"\n  [ERROR] Unknown token. Valid: {valid}")
-        return
-
-    from_mint, from_dec = TOKENS[from_token]
-    to_mint,   to_dec   = TOKENS[to_token]
-    amount_raw = int(amount * (10 ** from_dec))
-
-    quote = get_quote(from_mint, to_mint, amount_raw)
-    if not quote:
-        print("  [ERROR] Could not fetch quote — check logs.")
-        return
-
-    in_ui  = int(float(quote["inAmount"]))  / (10 ** from_dec)
-    out_ui = int(float(quote["outAmount"])) / (10 ** to_dec)
-    rate   = out_ui / in_ui if in_ui else 0
-
-    print(f"\n  ─────────────────────────────────────")
-    print(f"  Jupiter Quote")
-    print(f"  ─────────────────────────────────────")
-    print(f"  {in_ui:.6f} {from_token.upper()}  →  {out_ui:.6f} {to_token.upper()}")
-    print(f"  Rate : 1 {from_token.upper()} = {rate:.6f} {to_token.upper()}")
-    print(f"  ─────────────────────────────────────\n")
-
-    if not execute:
-        print("  Pass --now to execute this swap.")
-        return
-
-    confirm = input(f"  Execute? (y/N) ").strip().lower()
-    if confirm != "y":
-        print("  Swap cancelled.")
-        return
-
-    logger.info(f"Executing swap: {amount} {from_token.upper()} → {to_token.upper()}")
-    sig = manual_swap(from_token, to_token, amount, force_execute=True)
-    if sig:
-        print(f"\n  Swap confirmed — sig: {sig}")
-        logger.info(f"Swap executed — sig: {sig}")
-    else:
-        print("  Swap failed — check logs.")
-
-
-def run_treasury():
-    """Run the autonomous treasury cycle (portfolio, staking, bills)."""
-    logger.info("Running treasury cycle...")
-    portfolio = auto_treasury()
-    state  = load_state()
-    status = get_survival_status()
-    save_public_data(state, status, portfolio)
 
 
 def run_shill():
@@ -584,11 +515,6 @@ def _help_full():
     print("  MEMORY")
     print("    memory             Refresh tweet metrics · display top 5 performers")
     print()
-    print("  TREASURY")
-    print("    treasury           Run autonomous treasury cycle (portfolio, stake, bills)")
-    print("    swap <from> <to> <amount>")
-    print("                       Manual swap via Jupiter (tokens: sol, usdc, jitosol)")
-    print()
     print("  PROMO")
     print("    verdict <wallet>   Scan wallet on-chain, generate + post free promo verdict tweet")
     print("    roast <tweet_url>  Manual roast — target handle extracted from URL (free)")
@@ -639,8 +565,6 @@ def main():
         run_shill()
     elif command == "announce":
         run_announce()
-    elif command == "treasury":
-        run_treasury()
     elif command == "verdict":
         if len(argv) < 2:
             print("  [ERROR] Usage: verdict <wallet_address>")
@@ -651,16 +575,6 @@ def main():
             print("  [ERROR] Usage: roast <tweet_url>")
             sys.exit(1)
         run_roast(argv[1])
-    elif command == "swap":
-        if len(argv) < 4:
-            print("  [ERROR] Usage: swap <from> <to> <amount> [--now]  (e.g. swap sol usdc 0.004)")
-            sys.exit(1)
-        try:
-            amount = float(argv[3])
-        except ValueError:
-            print(f"  [ERROR] Invalid amount: '{argv[3]}'")
-            sys.exit(1)
-        run_swap(argv[1], argv[2], amount, execute="--now" in argv)
     else:
         print(f"\n  [ERROR] Unknown command: '{command}'")
         _help_short()

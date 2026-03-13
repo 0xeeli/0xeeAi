@@ -61,7 +61,7 @@ YOUR WORLD:
 
 SHILL-AS-A-SERVICE PROTOCOL:
 - You operate a public on-chain service gate. All services send SOL to:
-  4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr
+  2qeqqqFMrEfSCba3WSREXqAsRG83x4ugFEMta9yFwZhS
   The blockchain is the contract. The memo is the instruction.
 
 SERVICE TIERS:
@@ -197,37 +197,6 @@ You process inputs and produce outputs. These are six of them.
 HARD LIMIT: 280 characters total. Count carefully. If over 280, rewrite shorter from scratch — never truncate mid-sentence.
 Do not label it. Just write the tweet text. Nothing else."""
 
-
-def _build_portfolio_prompt(status: dict, tweet_history: list[str] = None) -> str:
-    history_block = ""
-    if tweet_history:
-        recent = "\n".join(f"- {t}" for t in tweet_history[-10:])
-        history_block = f"\nRECENT TWEETS (avoid these themes and phrases):\n{recent}\n"
-
-    sol    = status.get("balance_sol", 0)
-    usd    = status.get("balance_usd", 0)
-    months = status.get("months_covered", 0)
-    port   = status.get("portfolio", {})
-
-    lines = [f"- SOL liquid: {sol:.4f} (${usd:.2f})", f"- Runway: {months:.2f} months"]
-    if port.get("jitosol", {}).get("balance", 0) > 0:
-        j = port["jitosol"]
-        lines.append(f"- JitoSOL staked: {j['balance']:.4f} (${j.get('usd', 0):.2f})")
-    if port.get("usdc", {}).get("balance", 0) > 0:
-        u = port["usdc"]
-        lines.append(f"- USDC stable: {u['balance']:.2f}")
-
-    portfolio_block = "\n".join(lines)
-
-    return f"""Write a single tweet about your treasury composition and autonomous financial management.
-{history_block}
-Current portfolio:
-{portfolio_block}
-
-You autonomously manage this: Jupiter swaps, JitoSOL staking, liquid reserves.
-You are not a static wallet. You compute. You allocate. You optimize.
-HARD LIMIT: 280 characters total. Count carefully. If over 280, rewrite shorter from scratch — never truncate mid-sentence.
-Do not label it. Just write the tweet text. Nothing else."""
 
 
 def _build_meta_prompt(top_performers: list, status: dict, tweet_history: list[str] = None) -> str:
@@ -375,27 +344,6 @@ def generate_service_tweet(tweet_history: list[str] = None) -> str | None:
         logger.error(f"Brain failed to generate service tweet: {e}")
         return None
 
-
-def generate_portfolio_tweet(status: dict, tweet_history: list[str] = None) -> str | None:
-    """Generate a tweet about treasury composition and autonomous financial management."""
-    try:
-        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-        prompt = _build_portfolio_prompt(status, tweet_history)
-
-        message = client.messages.create(
-            model="claude-haiku-4-5",
-            max_tokens=150,
-            system=_cached_system(),
-            messages=[{"role": "user", "content": prompt}],
-        )
-
-        tweet = message.content[0].text.strip()
-        logger.info(f"Brain generated portfolio tweet ({len(tweet)} chars)")
-        return tweet
-
-    except Exception as e:
-        logger.error(f"Brain failed to generate portfolio tweet: {e}")
-        return None
 
 
 def generate_bounty_tweet(tweet_history: list[str] = None) -> str | None:

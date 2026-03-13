@@ -101,7 +101,7 @@ X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_SECRET
 ANTHROPIC_API_KEY
 
 # Solana
-SOLANA_WALLET=4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr
+SOLANA_WALLET=2qeqqqFMrEfSCba3WSREXqAsRG83x4ugFEMta9yFwZhS
 SOLANA_RPC=https://api.mainnet-beta.solana.com  # fallback si Helius absent
 HELIUS_API_KEY=<key>          # RPC premium — vérifié par check_helius() dans status
 SOLANA_PRIVATE_KEY=<base58>   # jamais loggé ni affiché
@@ -190,7 +190,7 @@ Note : Claude Pro ($20/mois) est un coût du développeur, pas imputé à 0xeeAI
 
 ## 8. Comptes et adresses
 
-- **Wallet treasury** : `4KJSBWyckBYpYKzm8jk39qHYc5qgdLneAVwzAVg7soXr`
+- **Wallet treasury** : `2qeqqqFMrEfSCba3WSREXqAsRG83x4ugFEMta9yFwZhS`
 - **Bot X** : [@0xeeAi](https://x.com/0xeeAi)
 - **Dev X** : [@0xeeli](https://x.com/0xeeli)
 - **Site** : [ai.0xee.li](https://ai.0xee.li)
