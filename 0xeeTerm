@@ -312,6 +312,7 @@ def run_status():
     status = get_survival_status()
     state  = load_state()
     helius = check_helius()
+    save_public_data(state, status)
 
     if helius["ok"]:
         helius_line = "OK  (Helius)"
