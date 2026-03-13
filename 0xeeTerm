@@ -350,6 +350,8 @@ def run_shill():
     """Scan on-chain transactions for paid shill requests and post mention tweets."""
     logger.info("Running shill cycle...")
     process_shills()
+    # Sweep surplus SOL to DevFund after each service cycle
+    sweep_to_devfund()
     # Refresh public.json so the dashboard reflects new recent_tolls immediately
     state = load_state()
     status = _load_cached_status()
