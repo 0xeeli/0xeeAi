@@ -24,7 +24,6 @@ async function syncWithMatrix() {
         // ==========================================
         // 1. MISE À JOUR DU DASHBOARD (index.html)
         // ==========================================
-        const treasuryElement = document.getElementById('treasury-value');
         const survivalPercentageElement = document.getElementById('survival-percentage');
         const progressFill = document.getElementById('progress-bar-fill');
 
@@ -78,27 +77,36 @@ async function syncWithMatrix() {
             });
         }
 
-        if (treasuryElement && survivalPercentageElement && progressFill && data.finance) {
-            const totalUsd = data.finance.balance_usd;
-            const survivalPct = data.finance.survival_pct;
+        // Total earned + monthly earned cards
+        const totalEarnedEl   = document.getElementById('total-earned');
+        const monthlyEarnedEl = document.getElementById('monthly-earned');
+        if (data.earnings) {
+            if (totalEarnedEl)   totalEarnedEl.innerText   = `$${(data.earnings.total_usd   || 0).toFixed(2)}`;
+            if (monthlyEarnedEl) monthlyEarnedEl.innerText = `$${(data.earnings.monthly_usd || 0).toFixed(2)}`;
+        }
 
-            treasuryElement.innerText = `$${totalUsd.toFixed(2)}`;
-            survivalPercentageElement.innerText = `${survivalPct.toFixed(0)}%`;
+        if (survivalPercentageElement && progressFill && data.earnings) {
+            const monthlyPct = data.earnings.monthly_pct || 0;
 
-            const fillWidth = Math.min(survivalPct, 100);
+            survivalPercentageElement.innerText = `${monthlyPct.toFixed(0)}%`;
+
+            const fillWidth = Math.min(monthlyPct, 100);
             progressFill.style.width = `${fillWidth}%`;
 
-            if (survivalPct < 100) {
-                treasuryElement.style.color = '#ff3333';
-                survivalPercentageElement.style.color = '#ff3333';
-                progressFill.style.background = 'linear-gradient(90deg, #9945FF, #ff3333)';
-                progressFill.style.boxShadow = '0 0 20px rgba(255, 51, 51, 0.4)';
+            if (monthlyPct < 100) {
+                survivalPercentageElement.style.color = monthlyPct < 50 ? '#ff3333' : 'var(--solana-green)';
+                progressFill.style.background = monthlyPct < 50
+                    ? 'linear-gradient(90deg, #9945FF, #ff3333)'
+                    : 'linear-gradient(90deg, var(--solana-purple), var(--solana-green))';
+                progressFill.style.boxShadow = monthlyPct < 50
+                    ? '0 0 20px rgba(255, 51, 51, 0.4)'
+                    : '0 0 20px rgba(20, 241, 149, 0.4)';
             } else {
-                treasuryElement.style.color = 'var(--solana-green)';
                 survivalPercentageElement.style.color = 'var(--solana-green)';
                 progressFill.style.background = 'linear-gradient(90deg, var(--solana-purple), var(--solana-green))';
                 progressFill.style.boxShadow = '0 0 20px rgba(20, 241, 149, 0.4)';
             }
+
         }
 
         // ==========================================

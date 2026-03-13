@@ -110,10 +110,28 @@ def save_public_data(state: dict, status: dict, portfolio: dict = None):
     """Export live data for ai.0xee.li frontend."""
     shill   = _load_shill_state()
     genesis = _load_genesis_registry()
+
+    sol_price    = (status or {}).get("sol_price", 0.0)
+    monthly_rent = float(os.getenv("MONTHLY_RENT", "18.0"))
+    total_sol    = shill.get("total_earned_sol",   0.0)
+    monthly_sol  = shill.get("monthly_earned_sol", 0.0)
+    monthly_usd  = round(monthly_sol * sol_price, 2)
+    monthly_pct  = round(min(monthly_usd / monthly_rent * 100, 100), 1) if monthly_rent else 0.0
+
+    earnings = {
+        "total_sol":          round(total_sol,   4),
+        "total_usd":          round(total_sol * sol_price, 2),
+        "monthly_sol":        round(monthly_sol, 4),
+        "monthly_usd":        monthly_usd,
+        "monthly_target_usd": monthly_rent,
+        "monthly_pct":        monthly_pct,
+    }
+
     public_data = {
         "updated_at":    datetime.now(timezone.utc).isoformat(),
         "finance":       status,
         "portfolio":     portfolio,
+        "earnings":      earnings,
         "recent_tweets": state.get("tweet_history", []),
         "tweets_posted": state.get("tweets_posted", 0),
         "tolls":         {"count": shill.get("tolls_count", 0), "recent": shill.get("recent_tolls", [])},

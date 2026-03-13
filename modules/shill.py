@@ -48,7 +48,24 @@ def _load_state() -> dict:
                 return json.load(f)
         except Exception as e:
             logger.error(f"Shill: failed to load state: {e}")
-    return {"processed_signatures": [], "tolls_count": 0, "recent_tolls": []}
+    return {
+        "processed_signatures": [],
+        "tolls_count": 0,
+        "recent_tolls": [],
+        "total_earned_sol": 0.0,
+        "monthly_earned_sol": 0.0,
+        "monthly_reset": "",
+    }
+
+
+def _record_earning(state: dict, sol: float):
+    """Accumulate earnings: cumulative total + monthly (auto-reset each calendar month)."""
+    now_month = datetime.now(timezone.utc).strftime("%Y-%m")
+    if state.get("monthly_reset") != now_month:
+        state["monthly_earned_sol"] = 0.0
+        state["monthly_reset"] = now_month
+    state["total_earned_sol"]   = round(state.get("total_earned_sol",  0.0) + sol, 6)
+    state["monthly_earned_sol"] = round(state.get("monthly_earned_sol", 0.0) + sol, 6)
 
 
 def _save_state(state: dict):
@@ -393,6 +410,7 @@ def process_shills():
                 new_shills += 1
                 now_iso = datetime.now(timezone.utc).isoformat()
                 state["tolls_count"] = (state.get("tolls_count") or 0) + 1
+                _record_earning(state, sol_received)
                 recent = state.get("recent_tolls", [])
                 recent.insert(0, {"handle": handle, "sol": round(sol_received, 4), "at": now_iso, "service": "roast"})
                 state["recent_tolls"] = recent[:10]
@@ -418,6 +436,7 @@ def process_shills():
                 new_shills += 1
                 now_iso = datetime.now(timezone.utc).isoformat()
                 state["tolls_count"] = (state.get("tolls_count") or 0) + 1
+                _record_earning(state, sol_received)
                 recent = state.get("recent_tolls", [])
                 recent.insert(0, {"handle": handle, "sol": round(sol_received, 4), "at": now_iso, "service": "persona"})
                 state["recent_tolls"] = recent[:10]
@@ -479,6 +498,7 @@ def process_shills():
             new_shills += 1
             now_iso = datetime.now(timezone.utc).isoformat()
             state["tolls_count"] = (state.get("tolls_count") or 0) + 1
+            _record_earning(state, sol_received)
             recent = state.get("recent_tolls", [])
             recent.insert(0, {
                 "handle":  handle,
