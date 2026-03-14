@@ -263,10 +263,10 @@ function _buildMemo(svcType, handle, extra) {
 // RPC URL served dynamically from public.json (Helius key lives on VPS, never in git)
 let _rpcUrl = null;
 
-// Public fallback RPCs for blockhash fetch (no API key required, CORS enabled)
+// RPC list for blockhash fetch — Helius primary (domain-whitelisted), public fallback
 const SOLANA_RPCS_FALLBACK = [
+    "https://mainnet.helius-rpc.com/?api-key=3be76680-7a47-43c8-ba2d-68c3c1ef18cf",
     "https://api.mainnet-beta.solana.com",
-    "https://solana.drpc.org",
 ];
 
 async function _getBlockhash() {
