@@ -300,6 +300,27 @@ function _detectWallet() {
     return null;
 }
 
+async function _sendRawTransaction(b64tx) {
+    const urls = _rpcUrl ? [_rpcUrl, ...SOLANA_RPCS_FALLBACK] : SOLANA_RPCS_FALLBACK;
+    for (const url of urls) {
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    jsonrpc: '2.0', id: 1,
+                    method: 'sendTransaction',
+                    params: [b64tx, { encoding: 'base64', preflightCommitment: 'confirmed' }],
+                }),
+            });
+            if (!res.ok) continue;
+            const json = await res.json();
+            if (json.result) return json.result; // signature
+        } catch (_) { /* try next */ }
+    }
+    throw new Error('All RPCs failed — try again later.');
+}
+
 async function payService() {
     const activeTab = document.querySelector('.service-tab.active');
     const svcType   = activeTab ? activeTab.dataset.service : 'toll';
@@ -375,10 +396,24 @@ async function payService() {
         tx.add(transferIx, memoIx);
 
         setStatus('Waiting for wallet approval...', 'var(--solana-purple)');
-        const { signature } = await wallet.signAndSendTransaction(tx);
+
+        let signature;
+        if (typeof wallet.signAndSendTransaction === 'function') {
+            // Phantom and compatible wallets
+            const result = await wallet.signAndSendTransaction(tx);
+            signature = result.signature ?? result;
+        } else if (typeof wallet.signTransaction === 'function') {
+            // Jupiter, Solflare and standard wallet adapters
+            const signed = await wallet.signTransaction(tx);
+            const raw    = signed.serialize();
+            const b64    = btoa(String.fromCharCode(...raw));
+            signature    = await _sendRawTransaction(b64);
+        } else {
+            throw new Error('Wallet does not support signing transactions.');
+        }
 
         const short = signature.slice(0, 8) + '...';
-        setStatus(`Transaction confirmed. Tx: ${short}`, 'var(--solana-green)');
+        setStatus(`Transaction sent. Tx: ${short}`, 'var(--solana-green)');
         console.log(`[0xeeAI] Service payment — type=${svcType} memo="${memo}" sig=${signature}`);
 
     } catch (err) {
