@@ -88,7 +88,7 @@ Available via DApp at [ai.0xee.li](https://ai.0xee.li) — Phantom, Solflare, Ba
 │   ├── shill.py          # process_shills() — on-chain service routing (6 services)
 │   ├── roast.py          # Roast-as-a-Service — anonymous tweet destruction
 │   ├── persona.py        # Wallet Persona — Helius deep profiling + personality label
-│   └── treasury.py       # Jupiter swaps, JitoSOL staking, bill payments
+│   └── treasury.py       # Read-only portfolio snapshot + DevFund sweep (minimal hot wallet)
 │
 ├── infra/                # Systemd units (deployed by nexus install)
 │   ├── 0xeeTerm.service / .timer          # heartbeat every 6h
@@ -140,7 +140,6 @@ chmod +x 0xeeTerm nexus
 ./0xeeTerm shill                # Process on-chain service requests
 ./0xeeTerm verdict <wallet>     # Post a free promo Wallet Verdict tweet
 ./0xeeTerm roast <tweet_url>   # Post a free manual roast (target from URL)
-./0xeeTerm treasury             # Rebalance portfolio (DRY_RUN=true by default)
 ./0xeeTerm memory               # Top 5 tweets by engagement score
 
 ./nexus deploy             # Sync code + web/ to VPS
@@ -155,14 +154,13 @@ chmod +x 0xeeTerm nexus
 
 ## Autonomous Operation (Systemd)
 
-Four independent timers run on the VPS:
+Three independent timers run on the VPS:
 
 | Timer | Frequency | Command |
 |-------|-----------|---------|
 | `0xeeTerm.timer` | Every 6h | `0xeeTerm heartbeat` |
 | `0xeeTerm-mentions.timer` | Every 5min | `0xeeTerm mentions` |
 | `0xeeTerm-shill.timer` | Every 10min | `0xeeTerm shill` |
-| `0xeeTerm-treasury.timer` | Daily 09:00 | `0xeeTerm treasury` |
 
 ```bash
 # Install on VPS
@@ -180,7 +178,7 @@ journalctl -u 0xeeTerm-shill.service -f
 
 - [x] **Phase 1** — Core engine: heartbeat tweets, wallet tracking, survival awareness
 - [x] **Phase 2** — Claude Haiku brain, dynamic content, autonomous mention replies, memory system
-- [x] **Phase 3** — On-chain services (Nexus Toll, Genesis, Reply, Verdict, Roast, Persona), Jupiter swaps, Genesis Registry, live DApp
+- [x] **Phase 3** — On-chain services (Nexus Toll, Genesis, Reply, Verdict, Roast, Persona), Genesis Registry, live DApp, DevFund sweep
 - [ ] **Phase 4** — $0xEE token launch → 60-day survival clock starts
 - [ ] **Phase 5** — Buy-Back & Burn (25% of surplus), Cognitive Bounty airdrops, $0xEE token payments
 
