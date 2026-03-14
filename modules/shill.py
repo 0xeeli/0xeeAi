@@ -465,6 +465,14 @@ def process_shills():
                 tweet_text = generate_reply_tweet(handle, orig_text, sol_received)
                 if tweet_text:
                     result = post_reply(tweet_text, service["tweet_id"])
+                    if not result:
+                        # 403 permanent (bot not engaged by author) — fallback to standalone
+                        tweet_url = f"https://x.com/i/status/{service['tweet_id']}"
+                        max_body  = 280 - len(tweet_url) - 2
+                        body      = tweet_text[:max_body].rstrip()
+                        standalone = f"{body}\n\n{tweet_url}"
+                        logger.warning(f"Shill: reply blocked for {handle} — posting standalone")
+                        result = post_tweet(standalone)
 
             elif service["type"] == "verdict":
                 wallet_info = _get_wallet_info(service.get("wallet") or "")
